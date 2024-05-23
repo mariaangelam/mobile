@@ -54,6 +54,16 @@ const AggiungiEvento = ({ navigation }) => {
   const [descrizione, setDescrizione] = useState('');
   const [isDataValid, setIsDataValid] = useState(true);
 
+  // Funzione per verificare la validità del giorno, mese e anno
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
   const handleAggiungiEvento = () => {
     // Converti la data da stringa a oggetto Date
     const dataFormattata = dataSelezionata.split('/');
@@ -62,25 +72,19 @@ const AggiungiEvento = ({ navigation }) => {
     const anno = parseInt(dataFormattata[2], 10);
 
     // Verifica la validità della data
-    const isValidDate = (day, month, year) => {
-      const data = new Date(year, month - 1, day);
-      return (
-        day === data.getDate() &&
-        month === data.getMonth() + 1 &&
-        year === data.getFullYear()
-      );
-    };
-
     if (!isValidDate(giorno, mese, anno)) {
       setIsDataValid(false);
       return;
     }
 
-    // Se la data è valida, crea il nuovo evento e aggiungilo
+    // Se la data è valida, imposta isDataValid a true
+    setIsDataValid(true);
+
+    // Creiamo la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
+ 
     const nuovoEvento = { titolo, data: nuovaData, descrizione };
     addEvent(nuovoEvento);
-    // Torna alla schermata precedente dopo aver aggiunto l'evento
     navigation.goBack();
   };
 
@@ -95,8 +99,8 @@ const AggiungiEvento = ({ navigation }) => {
         placeholderTextColor="#888"
       />
       <Text style={styles.label}>Data:</Text>
-      <TextInput
-        style={[styles.input, !isDataValid && { borderColor: 'red' }]} // Imposta il bordo rosso se la data non è valida
+        <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
         placeholder="Inserisci la data (DD/MM/YYYY)"
         value={dataSelezionata}
         maxLength={10}
@@ -107,11 +111,10 @@ const AggiungiEvento = ({ navigation }) => {
           } else {
             setDataSelezionata(text);
           }
-          // Effettua il controllo della validità della data ad ogni modifica
-          setIsDataValid(isValidDate(giorno, mese, anno));
+
         }}
       />
-      {!isDataValid && <Text style={{ color: 'red' }}>Data non valida</Text>} {/* Mostra il messaggio di errore se la data non è valida */}
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
       <Text style={styles.label}>Descrizione:</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -127,7 +130,6 @@ const AggiungiEvento = ({ navigation }) => {
   );
 };
 
- 
 const TopTab = createMaterialTopTabNavigator();
 
 const Dashboard = ({ navigation }) => {
@@ -331,7 +333,15 @@ const styles = StyleSheet.create({
   eventDescription: {
     fontSize: 14,
   },
- 
+    invalidInput: {
+    borderColor: 'red', // Cambia il colore del bordo in rosso se la data non è valida
+  },
+  errorText: {
+    color: 'red', // Colore rosso per il testo dell'errore
+    fontSize: 14, // Dimensione del font per il testo dell'errore
+    marginTop: -10, // Spostamento verso l'alto per posizionare meglio il testo
+    marginBottom: 10, // Spazio sotto il testo dell'errore
+  },
 });
 
 export default App;
