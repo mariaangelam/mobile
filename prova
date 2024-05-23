@@ -29,6 +29,9 @@ const Eventi = () => {
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
+      <TouchableOpacity onPress={() => aggiungiPersonaEvento(item)}>
+        <MaterialCommunityIcons name="account-plus" size={24} color="black" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -49,37 +52,35 @@ const AggiungiEvento = ({ navigation }) => {
   const [titolo, setTitolo] = useState('');
   const [dataSelezionata, setDataSelezionata] = useState('');
   const [descrizione, setDescrizione] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
 
- const handleAggiungiEvento = () => {
-  const dataFormattata = dataSelezionata.split('/');
-  const giorno = parseInt(dataFormattata[0], 10);
-  const mese = parseInt(dataFormattata[1], 10);
-  const anno = parseInt(dataFormattata[2], 10);
+  const handleAggiungiEvento = () => {
+    // Converti la data da stringa a oggetto Date
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
 
-  // Verifichiamo la validità della data
-  if (isNaN(giorno) || isNaN(mese) || isNaN(anno)) {
-    console.error('Data non valida');
-    return;
-  }
+    // Verifica la validità della data
+    const isValidDate = (day, month, year) => {
+      const data = new Date(year, month - 1, day);
+      return (
+        day === data.getDate() &&
+        month === data.getMonth() + 1 &&
+        year === data.getFullYear()
+      );
+    };
 
-  // Verifichiamo la validità del mese
-  if (mese < 1 || mese > 12) {
-    console.error('Mese non valido');
-    return;
-  }
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
 
-  // Verifichiamo la validità del giorno
-  const giorniInMese = new Date(anno, mese, 0).getDate();
-  if (giorno < 1 || giorno > giorniInMese) {
-    console.error('Giorno non valido');
-    return;
-  }
-
-  // Creiamo la nuova data
-  const nuovaData = new Date(anno, mese - 1, giorno);
- 
+    // Se la data è valida, crea il nuovo evento e aggiungilo
+    const nuovaData = new Date(anno, mese - 1, giorno);
     const nuovoEvento = { titolo, data: nuovaData, descrizione };
     addEvent(nuovoEvento);
+    // Torna alla schermata precedente dopo aver aggiunto l'evento
     navigation.goBack();
   };
 
@@ -95,7 +96,7 @@ const AggiungiEvento = ({ navigation }) => {
       />
       <Text style={styles.label}>Data:</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, !isDataValid && { borderColor: 'red' }]} // Imposta il bordo rosso se la data non è valida
         placeholder="Inserisci la data (DD/MM/YYYY)"
         value={dataSelezionata}
         maxLength={10}
@@ -106,8 +107,11 @@ const AggiungiEvento = ({ navigation }) => {
           } else {
             setDataSelezionata(text);
           }
+          // Effettua il controllo della validità della data ad ogni modifica
+          setIsDataValid(isValidDate(giorno, mese, anno));
         }}
       />
+      {!isDataValid && <Text style={{ color: 'red' }}>Data non valida</Text>} {/* Mostra il messaggio di errore se la data non è valida */}
       <Text style={styles.label}>Descrizione:</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -123,6 +127,7 @@ const AggiungiEvento = ({ navigation }) => {
   );
 };
 
+ 
 const TopTab = createMaterialTopTabNavigator();
 
 const Dashboard = ({ navigation }) => {
@@ -326,6 +331,7 @@ const styles = StyleSheet.create({
   eventDescription: {
     fontSize: 14,
   },
+ 
 });
 
 export default App;
