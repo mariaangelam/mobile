@@ -5,8 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { isValid, parseISO } from 'date-fns';
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { SearchBar } from 'react-native-elements';
 
 const EventsContext = createContext();
 
@@ -24,7 +23,7 @@ const GestisciEvento = () => (
 
 const Eventi = () => {
   const { events } = useContext(EventsContext);
-
+ const [search, setSearch] = useState('');
   const renderEvento = ({ item }) => (
        <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
@@ -34,8 +33,16 @@ const Eventi = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Text>Schermata Eventi</Text>
+    <View>
+          <SearchBar
+        placeholder="Cerca evento..."
+        onChangeText={setSearch}
+        value={search}
+          inputStyle={{ backgroundColor: 'white', fontSize: 14 }} // Stile del testo di input
+        containerStyle={{ backgroundColor: 'white', borderWidth: 0 }} // Stile del contenitore esterno
+        inputContainerStyle={{ backgroundColor: 'white', borderRadius: 10 }} // Stile del contenitore interno
+      />
+  
       <FlatList
         data={events}
         renderItem={renderEvento}
@@ -386,3 +393,8 @@ plus: {
         justifyContent: 'center', // Centra verticalmente l'icona all'interno del contenitore
     alignItems: 'center',
 }
+
+
+});
+
+export default App;
