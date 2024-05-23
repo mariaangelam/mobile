@@ -3,13 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet } from 'react-native';
-import DatePicker from '@react-native-community/datetimepicker'; // Importa il DatePicker dalla community
+import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 
-
-// Creazione del context degli eventi
+//mi serve per passare gli Eventi tra i vari componenti
 const EventsContext = createContext();
 
+//schermata statistiche
 const Statistiche = () => {
   return (
     <View>
@@ -17,7 +16,7 @@ const Statistiche = () => {
     </View>
   );
 };
-
+//schermata Gestisci Evento
 const GestisciEvento = () => {
   return (
     <View>
@@ -26,33 +25,53 @@ const GestisciEvento = () => {
   );
 };
 
+//Schermata eventi: 
 const Eventi = () => {
+//userò Context per memorizzare in events i dati dei vari Eventi
   const { events } = useContext(EventsContext);
 
+//come decido di mostrarli in output: in una box di colore viola
+//titolo in grassetto e descrizione in corsivo
+  const renderEvento = ({ item }) => (
+    <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data}</Text>
+      <Text style={styles.eventDescription}>{item.descrizione}</Text>
+    </View>
+  );
+//Ritorno una vista che contiene una flatlist che come dati contiene tutti i dati gli eventi (array di //eventi),
+//utilizza renderItem per mostrare in output i dati in un certo modo, utilizza la funzione renderEvento viene utilizzata per renderizzare ciascun elemento della lista.
+//estrae una chiave per identificare in modo univoco ogni evento della lista
   return (
     <View style={styles.container}>
       <Text>Schermata Eventi</Text>
-      {events.map((evento, index) => (
-        <View key={index} style={[styles.eventContainer, { backgroundColor: '#e6e6fa' }]}>
-          <Text style={styles.eventTitle}>{evento.titolo}</Text>
-          <Text style={styles.eventDate}>{evento.data.toDateString()}</Text>
-          <Text style={styles.eventDescription}>{evento.descrizione}</Text>
-        </View>
-      ))}
+      <FlatList
+        data={events}
+        renderItem={renderEvento}
+        keyExtractor={(item, index) => index.toString()}
+      />
     </View>
   );
 };
 
 const AggiungiEvento = ({ navigation }) => {
-  const { addEvent } = useContext(EventsContext); // Ottenere la funzione per aggiungere un evento dal context
+  const { addEvent } = useContext(EventsContext);
   const [titolo, setTitolo] = useState('');
-  const [data, setData] = useState(new Date());
+  const [dataSelezionata, setDataSelezionata] = useState('');
   const [descrizione, setDescrizione] = useState('');
-  const [open, setOpen] = useState(false);
+
+  const handleSubmit = () => {
+    // Gestisci la data inserita dall'utente
+    console.log('Data inserita:', dataSelezionata);
+  };
+
+  const handleChange = (text) => {
+    setDataSelezionata(text);
+  };
 
   const handleAggiungiEvento = () => {
-    const nuovoEvento = { titolo, data, descrizione };
-    addEvent(nuovoEvento); // Aggiungi l'evento utilizzando la funzione dal context
+    const nuovoEvento = { titolo, data: dataSelezionata, descrizione };
+    addEvent(nuovoEvento);
     navigation.goBack();
   };
 
@@ -67,21 +86,23 @@ const AggiungiEvento = ({ navigation }) => {
         placeholderTextColor="#888"
       />
       <Text style={styles.label}>Data:</Text>
-      <TouchableOpacity onPress={() => setOpen(true)} style={styles.input}>
-        <Text>{data.toDateString()}</Text>
-      </TouchableOpacity>
-  <DatePicker
-  modal
-  open={open}
-  value={data} // Assicurati di passare correttamente il valore della data
-  onConfirm={(date) => {
-    setOpen(false);
-    setData(date);
-  }}
-  onCancel={() => {
-    setOpen(false);
+  <TextInput
+  style={styles.input}
+  placeholder="Inserisci la data (DD/MM/YYYY)"
+  value={dataSelezionata}
+  maxLength={10} // Imposta la lunghezza massima del campo di input
+  keyboardType="numeric" // Imposta la tastiera numerica per il campo di input
+  onChangeText={(text) => {
+    if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+      setDataSelezionata(text + '/');
+    } else {
+      setDataSelezionata(text);
+    }
   }}
 />
+
+      <Button title="Conferma" onPress={handleSubmit} />
+
       <Text style={styles.label}>Descrizione:</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -97,19 +118,27 @@ const AggiungiEvento = ({ navigation }) => {
   );
 };
 
+
+
 const Dashboard = ({ navigation }) => {
   const { events } = useContext(EventsContext);
+
+  const renderEvento = ({ item }) => (
+    <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data}</Text>
+      <Text style={styles.eventDescription}>{item.descrizione}</Text>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>
       <Text style={styles.title}>Qui verranno mostrati tutti gli eventi</Text>
-      {events.map((evento, index) => (
-        <View key={index} style={styles.eventContainer}>
-          <Text style={styles.eventTitle}>{evento.titolo}</Text>
-          <Text style={styles.eventDate}>{evento.data.toDateString()}</Text>
-          <Text style={styles.eventDescription}>{evento.descrizione}</Text>
-        </View>
-      ))}
+      <FlatList
+        data={events}
+        renderItem={renderEvento}
+        keyExtractor={(item, index) => index.toString()}
+      />
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('AggiungiEvento')}
@@ -119,6 +148,7 @@ const Dashboard = ({ navigation }) => {
     </View>
   );
 };
+
 
 const Notifiche = () => {
   return (
