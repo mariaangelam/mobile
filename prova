@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { isValid, parseISO } from 'date-fns';
 
 const EventsContext = createContext();
 
