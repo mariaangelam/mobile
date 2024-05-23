@@ -1,47 +1,36 @@
 import React, { useState, createContext, useContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NavigationContainer } from '@react-navigation/native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 
-//mi serve per passare gli Eventi tra i vari componenti
 const EventsContext = createContext();
 
-//schermata statistiche
-const Statistiche = () => {
-  return (
-    <View>
-      <Text>Statistics Screen</Text>
-    </View>
-  );
-};
-//schermata Gestisci Evento
-const GestisciEvento = () => {
-  return (
-    <View>
-      <Text>Edit Screen</Text>
-    </View>
-  );
-};
+const Statistiche = () => (
+  <View>
+    <Text>Schermata Statistiche</Text>
+  </View>
+);
 
-//Schermata eventi: 
+const GestisciEvento = () => (
+  <View>
+    <Text>Schermata Gestisci Evento</Text>
+  </View>
+);
+
 const Eventi = () => {
-//userò Context per memorizzare in events i dati dei vari Eventi
   const { events } = useContext(EventsContext);
 
-//come decido di mostrarli in output: in una box di colore viola
-//titolo in grassetto e descrizione in corsivo
   const renderEvento = ({ item }) => (
     <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
-      <Text style={styles.eventDate}>{item.data}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
     </View>
   );
-//Ritorno una vista che contiene una flatlist che come dati contiene tutti i dati gli eventi (array di //eventi),
-//utilizza renderItem per mostrare in output i dati in un certo modo, utilizza la funzione renderEvento viene utilizzata per renderizzare ciascun elemento della lista.
-//estrae una chiave per identificare in modo univoco ogni evento della lista
+
   return (
     <View style={styles.container}>
       <Text>Schermata Eventi</Text>
@@ -60,17 +49,19 @@ const AggiungiEvento = ({ navigation }) => {
   const [dataSelezionata, setDataSelezionata] = useState('');
   const [descrizione, setDescrizione] = useState('');
 
-  const handleSubmit = () => {
-    // Gestisci la data inserita dall'utente
-    console.log('Data inserita:', dataSelezionata);
-  };
-
-  const handleChange = (text) => {
-    setDataSelezionata(text);
-  };
-
   const handleAggiungiEvento = () => {
-    const nuovoEvento = { titolo, data: dataSelezionata, descrizione };
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10) - 1;
+    const anno = parseInt(dataFormattata[2], 10);
+    const nuovaData = new Date(anno, mese, giorno);
+   
+  
+  if (!isValid(nuovaData)) {
+    console.error('Data non valida');
+    return;
+  }
+    const nuovoEvento = { titolo, data: nuovaData, descrizione };
     addEvent(nuovoEvento);
     navigation.goBack();
   };
@@ -86,23 +77,20 @@ const AggiungiEvento = ({ navigation }) => {
         placeholderTextColor="#888"
       />
       <Text style={styles.label}>Data:</Text>
-  <TextInput
-  style={styles.input}
-  placeholder="Inserisci la data (DD/MM/YYYY)"
-  value={dataSelezionata}
-  maxLength={10} // Imposta la lunghezza massima del campo di input
-  keyboardType="numeric" // Imposta la tastiera numerica per il campo di input
-  onChangeText={(text) => {
-    if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
-      setDataSelezionata(text + '/');
-    } else {
-      setDataSelezionata(text);
-    }
-  }}
-/>
-
-      <Button title="Conferma" onPress={handleSubmit} />
-
+      <TextInput
+        style={styles.input}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+        value={dataSelezionata}
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+            setDataSelezionata(text + '/');
+          } else {
+            setDataSelezionata(text);
+          }
+        }}
+      />
       <Text style={styles.label}>Descrizione:</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -118,7 +106,7 @@ const AggiungiEvento = ({ navigation }) => {
   );
 };
 
-
+const TopTab = createMaterialTopTabNavigator();
 
 const Dashboard = ({ navigation }) => {
   const { events } = useContext(EventsContext);
@@ -126,7 +114,7 @@ const Dashboard = ({ navigation }) => {
   const renderEvento = ({ item }) => (
     <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
-      <Text style={styles.eventDate}>{item.data}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
     </View>
   );
@@ -134,11 +122,33 @@ const Dashboard = ({ navigation }) => {
   return (
     <View style={{ flex: 1 }}>
       <Text style={styles.title}>Qui verranno mostrati tutti gli eventi</Text>
-      <FlatList
-        data={events}
-        renderItem={renderEvento}
-        keyExtractor={(item, index) => index.toString()}
-      />
+      <TopTab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: '#fff',
+          tabBarInactiveTintColor: '#ccc',
+          tabBarStyle: { backgroundColor: '#6200ea' },
+          tabBarIndicatorStyle: { backgroundColor: '#fff' },
+        }}
+      >
+        <TopTab.Screen name="Eventi Passati" component={() => (
+          <View style={styles.tabContainer}>
+            <FlatList
+              data={events.filter(event => event.data < new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+        <TopTab.Screen name="Eventi Futuri" component={() => (
+          <View style={styles.tabContainer}>
+            <FlatList
+              data={events.filter(event => event.data >= new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+      </TopTab.Navigator>
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('AggiungiEvento')}
@@ -148,83 +158,78 @@ const Dashboard = ({ navigation }) => {
     </View>
   );
 };
+const Notifiche = () => (
+  <View>
+    <Text>Schermata Notifiche</Text>
+  </View>
+);
 
+const BottomTab = createBottomTabNavigator();
 
-const Notifiche = () => {
-  return (
-    <View>
-      <Text>Schermata Notifiche</Text>
-    </View>
-  );
-};
-
-const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
-
-const TabNavigator = () => {
-  return (
-    <Tab.Navigator
-      initialRouteName="Dashboard"
-      screenOptions={{
-        tabBarActiveTintColor: '#6200ea',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: { backgroundColor: '#ffff' },
+const TabNavigator = () => (
+  <BottomTab.Navigator
+    initialRouteName="Dashboard"
+    screenOptions={{
+      tabBarActiveTintColor: '#6200ea',
+      tabBarInactiveTintColor: 'gray',
+      tabBarStyle: { backgroundColor: '#ffff' },
+    }}
+  >
+    <BottomTab.Screen
+      name="Dashboard"
+      component={Dashboard}
+      options={{
+        tabBarLabel: 'Dashboard',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
+        ),
       }}
-    >
-      <Tab.Screen
-        name="Dashboard"
-        component={Dashboard}
-        options={{
-          tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Eventi"
-        component={Eventi}
-        options={{
-          tabBarLabel: 'Eventi',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Modifica Evento"
-        component={GestisciEvento}
-        options={{
-          tabBarLabel: 'Modifica',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="pencil" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Statistiche"
-        component={Statistiche}
-        options={{
-          tabBarLabel: 'Statistiche',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Notifiche"
-        component={Notifiche}
-        options={{
-          tabBarLabel: 'Notifiche',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="bell" color={color} size={size} />
-          ),
-          tabBarBadge: 3,
-        }}
-      />
-    </Tab.Navigator>
-  );
-};
+    />
+    <BottomTab.Screen
+      name="Eventi"
+      component={Eventi}
+      options={{
+        tabBarLabel: 'Eventi',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="calendar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Modifica Evento"
+      component={GestisciEvento}
+      options={{
+        tabBarLabel: 'Modifica',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="pencil" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Statistiche"
+      component={Statistiche}
+      options={{
+        tabBarLabel: 'Statistiche',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Notifiche"
+      component={Notifiche}
+      options={{
+        tabBarLabel: 'Notifiche',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="bell" color={color} size={size} />
+        ),
+        tabBarBadge: 3,
+      }}
+    />
+  </BottomTab.Navigator>
+);
+
+const Stack = createStackNavigator();
 
 const App = () => {
   const [events, setEvents] = useState([]);
@@ -258,6 +263,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+
   label: {
     fontSize: 16,
     marginVertical: 8,
@@ -290,23 +296,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   eventContainer: {
     marginBottom: 10,
     padding: 10,
     borderRadius: 8,
     backgroundColor: '#e6e6fa',
-        marginLeft: 20, // Aggiungi spazio vuoto a sinistra
-    marginRight: 20, // Aggiungi spazio vuoto a destra
+    marginLeft: 20,
+    marginRight: 20,
   },
-
-    eventTitle: {
+  eventTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
+  },
+  eventDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  eventDescription: {
+    fontSize: 14,
   },
 });
-
 
 export default App;
 
