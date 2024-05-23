@@ -6,6 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { isValid, parseISO } from 'date-fns';
+import { LinearGradient } from 'expo-linear-gradient'; 
 
 const EventsContext = createContext();
 
@@ -25,13 +26,10 @@ const Eventi = () => {
   const { events } = useContext(EventsContext);
 
   const renderEvento = ({ item }) => (
-    <View style={styles.eventContainer}>
+       <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
-      <TouchableOpacity onPress={() => aggiungiPersonaEvento(item)}>
-        <MaterialCommunityIcons name="account-plus" size={24} color="black" />
-      </TouchableOpacity>
     </View>
   );
 
@@ -88,8 +86,12 @@ const AggiungiEvento = ({ navigation }) => {
     navigation.goBack();
   };
 
+   const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
   return (
     <View style={styles.container}>
+  
       <Text style={styles.label}>Titolo:</Text>
       <TextInput
         style={styles.input}
@@ -98,6 +100,7 @@ const AggiungiEvento = ({ navigation }) => {
         placeholder="Inserisci il titolo"
         placeholderTextColor="#888"
       />
+       {isFieldEmpty(titolo) && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
       <Text style={styles.label}>Data:</Text>
         <TextInput
         style={[styles.input, !isDataValid && styles.invalidInput]}
@@ -125,8 +128,16 @@ const AggiungiEvento = ({ navigation }) => {
         multiline={true}
         numberOfLines={4}
       />
-      <Button title="Aggiungi Evento" onPress={handleAggiungiEvento} />
-    </View>
+       {isFieldEmpty(descrizione) && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+<View style={styles.addButtonContainer}>
+  <TouchableOpacity
+    onPress={handleAggiungiEvento}
+    style={styles.addButton1}
+  >
+    <Text style={styles.buttonText}>Aggiungi Evento</Text>
+  </TouchableOpacity>
+</View>
+</View>
   );
 };
 
@@ -140,6 +151,9 @@ const Dashboard = ({ navigation }) => {
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
+            <TouchableOpacity onPress={() => handleAggiungiPersonaEvento(item)} style={styles.plus}>
+        <MaterialCommunityIcons name="account-plus" size={25} color="black" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -179,6 +193,7 @@ const Dashboard = ({ navigation }) => {
         <MaterialCommunityIcons name="plus" color="#fff" size={24} />
       </TouchableOpacity>
     </View>
+
   );
 };
 const Notifiche = () => (
@@ -285,6 +300,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+backgroundColor:'#E6E6FA'
+
   },
 
   label: {
@@ -342,6 +359,30 @@ const styles = StyleSheet.create({
     marginTop: -10, // Spostamento verso l'alto per posizionare meglio il testo
     marginBottom: 10, // Spazio sotto il testo dell'errore
   },
-});
-
-export default App;
+   addButtonContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addButton1: {
+    backgroundColor: '#6200ea', // Colore viola
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 5,
+    
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+plus: {
+    position: 'absolute', // Posiziona l'omino in modo assoluto rispetto al suo contenitore
+    bottom: 5, // Spazio dal basso
+    right: 10, // Spazio da destra
+    backgroundColor: '#6200ea',
+    borderRadius: 10,
+    width: 30, // Larghezza del contenitore
+    height: 30, // Altezza del contenitore
+        justifyContent: 'center', // Centra verticalmente l'icona all'interno del contenitore
+    alignItems: 'center',
+}
