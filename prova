@@ -61,8 +61,9 @@ const AggiungiEvento = ({ navigation }) => {
   const [dataSelezionata, setDataSelezionata] = useState('');
   const [descrizione, setDescrizione] = useState('');
   const [isDataValid, setIsDataValid] = useState(true);
+  const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
+  const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
 
-  // Funzione per verificare la validità del giorno, mese e anno
   const isValidDate = (day, month, year) => {
     const data = new Date(year, month - 1, day);
     return (
@@ -72,47 +73,56 @@ const AggiungiEvento = ({ navigation }) => {
     );
   };
 
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
   const handleAggiungiEvento = () => {
-    // Converti la data da stringa a oggetto Date
+    // Convert date from string to Date object
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
     const anno = parseInt(dataFormattata[2], 10);
 
-    // Verifica la validità della data
+    // Check date validity
     if (!isValidDate(giorno, mese, anno)) {
       setIsDataValid(false);
       return;
     }
 
-    // Se la data è valida, imposta isDataValid a true
+    // Check if fields are empty
+    setIsTitoloEmpty(isFieldEmpty(titolo));
+    setIsDescrizioneEmpty(isFieldEmpty(descrizione));
+    if (isFieldEmpty(titolo) || isFieldEmpty(descrizione)) {
+      return;
+    }
+
+    // If the date is valid, set isDataValid to true
     setIsDataValid(true);
 
-    // Creiamo la nuova data
+    // Create the new date
     const nuovaData = new Date(anno, mese - 1, giorno);
- 
+
+    // Create the new event
     const nuovoEvento = { titolo, data: nuovaData, descrizione };
     addEvent(nuovoEvento);
     navigation.goBack();
   };
 
-   const isFieldEmpty = (fieldValue) => {
-    return fieldValue.trim() === '';
-  };
   return (
     <View style={styles.container}>
-  
       <Text style={styles.label}>Titolo:</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, isTitoloEmpty && styles.invalidInput]}
         value={titolo}
         onChangeText={setTitolo}
         placeholder="Inserisci il titolo"
         placeholderTextColor="#888"
       />
-       {isFieldEmpty(titolo) && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+      {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+      
       <Text style={styles.label}>Data:</Text>
-        <TextInput
+      <TextInput
         style={[styles.input, !isDataValid && styles.invalidInput]}
         placeholder="Inserisci la data (DD/MM/YYYY)"
         value={dataSelezionata}
@@ -124,13 +134,13 @@ const AggiungiEvento = ({ navigation }) => {
           } else {
             setDataSelezionata(text);
           }
-
         }}
       />
       {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
       <Text style={styles.label}>Descrizione:</Text>
       <TextInput
-        style={[styles.input, styles.textArea]}
+        style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
         value={descrizione}
         onChangeText={setDescrizione}
         placeholder="Inserisci la descrizione"
@@ -138,16 +148,17 @@ const AggiungiEvento = ({ navigation }) => {
         multiline={true}
         numberOfLines={4}
       />
-       {isFieldEmpty(descrizione) && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
-<View style={styles.addButtonContainer}>
-  <TouchableOpacity
-    onPress={handleAggiungiEvento}
-    style={styles.addButton1}
-  >
-    <Text style={styles.buttonText}>Aggiungi Evento</Text>
-  </TouchableOpacity>
-</View>
-</View>
+      {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAggiungiEvento}
+          style={styles.addButton1}
+        >
+          <Text style={styles.buttonText}>Aggiungi Evento</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
