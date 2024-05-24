@@ -21,8 +21,9 @@ const GestisciEvento = () => (
   </View>
 );
 
-const Eventi = () => {
-  const { events } = useContext(EventsContext);
+
+ const Eventi = () => {
+ const { events } = useContext(EventsContext);
  const [search, setSearch] = useState('');
   const renderEvento = ({ item }) => (
        <View style={styles.eventContainer}>
@@ -33,21 +34,23 @@ const Eventi = () => {
   );
 
   return (
-    <View>
-          <SearchBar
-        placeholder="Cerca evento..."
-        onChangeText={setSearch}
-        value={search}
-          inputStyle={{ backgroundColor: 'white', fontSize: 14 }} // Stile del testo di input
-        containerStyle={{ backgroundColor: 'white', borderWidth: 0 }} // Stile del contenitore esterno
-        inputContainerStyle={{ backgroundColor: 'white', borderRadius: 10 }} // Stile del contenitore interno
-      />
-  
-      <FlatList
-        data={events}
-        renderItem={renderEvento}
-        keyExtractor={(item, index) => index.toString()}
-      />
+   <View>
+<SearchBar
+  placeholder="Cerca evento..."
+  onChangeText={setSearch}
+  value={search}
+  inputStyle={{ backgroundColor: 'white', color: 'black', fontSize: 12, borderRadius: 5, paddingHorizontal: 10, height: 10, borderColor: '#555', borderWidth: 1, marginBottom: 10  }} // Stili direttamente applicati all'input di ricerca
+  inputContainerStyle={{ backgroundColor: 'white', borderRadius: 10 }} // Stili del contenitore interno
+  containerStyle={{ backgroundColor: 'transparent', borderBottomColor: 'transparent', borderTopColor: 'transparent'  }} // Stili del contenitore esterno
+/>
+
+      <View style={styles.eventsMargin}>
+        <FlatList
+          data={events}
+          renderItem={renderEvento}
+          keyExtractor={(item, index) => index.toString()}
+        />
+      </View>
     </View>
   );
 };
@@ -153,13 +156,13 @@ const TopTab = createMaterialTopTabNavigator();
 const Dashboard = ({ navigation }) => {
   const { events } = useContext(EventsContext);
 
-  const renderEvento = ({ item }) => (
+ const renderEvento = ({ item }) => (
     <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription}>{item.descrizione}</Text>
-            <TouchableOpacity onPress={() => handleAggiungiPersonaEvento(item)} style={styles.plus}>
-        <MaterialCommunityIcons name="account-plus" size={25} color="black" />
+      <TouchableOpacity onPress={() => handleAggiungiPersonaEvento(item)} style={styles.plus}>
+        <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
       </TouchableOpacity>
     </View>
   );
@@ -175,7 +178,7 @@ const Dashboard = ({ navigation }) => {
         }}
       >
         <TopTab.Screen name="Eventi Passati" component={() => (
-          <View style={styles.tabContainer}>
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
             <FlatList
               data={events.filter(event => event.data < new Date())}
               renderItem={renderEvento}
@@ -184,7 +187,7 @@ const Dashboard = ({ navigation }) => {
           </View>
         )} />
         <TopTab.Screen name="Eventi Futuri" component={() => (
-          <View style={styles.tabContainer}>
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
             <FlatList
               data={events.filter(event => event.data >= new Date())}
               renderItem={renderEvento}
@@ -200,7 +203,6 @@ const Dashboard = ({ navigation }) => {
         <MaterialCommunityIcons name="plus" color="#fff" size={24} />
       </TouchableOpacity>
     </View>
-
   );
 };
 const Notifiche = () => (
@@ -307,7 +309,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-backgroundColor:'#E6E6FA'
+backgroundColor:'#E6E6FA',
+
 
   },
 
@@ -386,13 +389,19 @@ plus: {
     position: 'absolute', // Posiziona l'omino in modo assoluto rispetto al suo contenitore
     bottom: 5, // Spazio dal basso
     right: 10, // Spazio da destra
-    backgroundColor: '#6200ea',
+    backgroundColor: '#e6e6fa',
     borderRadius: 10,
     width: 30, // Larghezza del contenitore
     height: 30, // Altezza del contenitore
         justifyContent: 'center', // Centra verticalmente l'icona all'interno del contenitore
     alignItems: 'center',
-}
+},
+  tabContainer: {
+    flex: 1,
+  },
+  eventsMargin: {
+    marginTop: 20, // Aggiungi il margine superiore per distanziare gli eventi dai tab superiori
+  },
 
 
 });
