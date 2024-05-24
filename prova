@@ -29,20 +29,20 @@ const GestisciEvento = () => (
        <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
-      <Text style={styles.eventDescription}>{item.descrizione}</Text>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
     </View>
   );
 
   return (
-   <View>
-<SearchBar
-  placeholder="Cerca evento..."
-  onChangeText={setSearch}
-  value={search}
-  inputStyle={{ backgroundColor: 'white', color: 'black', fontSize: 12, borderRadius: 5, paddingHorizontal: 10, height: 10, borderColor: '#555', borderWidth: 1, marginBottom: 10  }} // Stili direttamente applicati all'input di ricerca
-  inputContainerStyle={{ backgroundColor: 'white', borderRadius: 10 }} // Stili del contenitore interno
-  containerStyle={{ backgroundColor: 'transparent', borderBottomColor: 'transparent', borderTopColor: 'transparent'  }} // Stili del contenitore esterno
-/>
+   <View style = {styles.container}>
+    <SearchBar
+      placeholder="Cerca evento..."
+      onChangeText={setSearch}
+      value={search}
+      containerStyle={styles.searchBarContainer}
+      inputContainerStyle={styles.searchBarInputContainer}
+    />
+
 
       <View style={styles.eventsMargin}>
         <FlatList
@@ -160,8 +160,8 @@ const Dashboard = ({ navigation }) => {
     <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
-      <Text style={styles.eventDescription}>{item.descrizione}</Text>
-      <TouchableOpacity onPress={() => handleAggiungiPersonaEvento(item)} style={styles.plus}>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+      <TouchableOpacity onPress={() => handleAggiungiPersonaEvento(item)} style={[styles.plus, styles.descriptionSpacer]}>
         <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
       </TouchableOpacity>
     </View>
@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
 backgroundColor:'#E6E6FA',
+ 
 
 
   },
@@ -359,6 +360,7 @@ backgroundColor:'#E6E6FA',
   },
   eventDescription: {
     fontSize: 14,
+    fontStyle: 'italic', // Imposta il font in corsivo
   },
     invalidInput: {
     borderColor: 'red', // Cambia il colore del bordo in rosso se la data non è valida
@@ -401,6 +403,26 @@ plus: {
   },
   eventsMargin: {
     marginTop: 20, // Aggiungi il margine superiore per distanziare gli eventi dai tab superiori
+  },
+  searchBarContainer: {
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    paddingHorizontal: 10,
+        width: '90%', // Imposta la larghezza della barra di ricerca al 90% del contenitore
+    alignSelf: 'center', // Allinea la barra di ricerca al centro del contenitore
+     borderRadius: 20,
+  
+  },
+  searchBarInputContainer: {
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    height: 30,
+   
+  },
+    descriptionSpacer: {
+    marginBottom: 10, // Aggiungi uno spazio inferiore di 10 punti tra la descrizione e l'omino "plus"
   },
 
 
