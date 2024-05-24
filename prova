@@ -34,7 +34,7 @@ const GestisciEvento = () => (
   );
 
   return (
-   <View style = {styles.container}>
+   <View style={styles.eventsMargin}>
     <SearchBar
       placeholder="Cerca evento..."
       onChangeText={setSearch}
@@ -320,9 +320,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-backgroundColor:'#E6E6FA',
- 
-
 
   },
 
@@ -360,6 +357,8 @@ backgroundColor:'#E6E6FA',
     backgroundColor: '#e6e6fa',
     marginLeft: 20,
     marginRight: 20,
+    borderWidth: 2,
+    borderColor: '#4b0082',
   },
   eventTitle: {
     fontSize: 18,
