@@ -6,9 +6,17 @@ import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { SearchBar } from 'react-native-elements';
+import SQLite from 'react-native-sqlite-storage';
 
 const EventsContext = createContext();
 const PeopleContext = createContext();
+
+
+SQLite.enablePromise(true);
+
+
+const dbPromise = SQLite.openDatabase({ name: 'mio_database.db', location: 'default' });
+
 
 const Statistiche = () => (
   <View>
@@ -78,14 +86,14 @@ const AggiungiEvento = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiEvento = () => {
-    // Convert date from string to Date object
+  const handleAggiungiEvento = async () => { {
+    // Converte la data in una stringa
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
     const anno = parseInt(dataFormattata[2], 10);
 
-    // Check date validity
+    // controllo la validità della data
     if (!isValidDate(giorno, mese, anno)) {
       setIsDataValid(false);
       return;
@@ -98,14 +106,19 @@ const AggiungiEvento = ({ navigation }) => {
       return;
     }
 
-    // If the date is valid, set isDataValid to true
+    
     setIsDataValid(true);
 
-    // Create the new date
+    // Crea la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    // Create the new event
     const nuovoEvento = { titolo, data: nuovaData, descrizione };
+    const db = await dbPromise;
+    await db.executeSql(
+      'INSERT INTO eventi (titolo, data, descrizione) VALUES (?, ?, ?)',
+      [titolo, nuovaData.toISOString(), descrizione]
+    );
+
     addEvent(nuovoEvento);
     navigation.goBack();
   };
@@ -316,7 +329,7 @@ const AggiungiPersona = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiPersona = () => {
+  const handleAggiungiPersona = async () => { 
     const dataFormattata = dataNascita.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
@@ -338,6 +351,11 @@ const AggiungiPersona = ({ navigation }) => {
     const nuovaData = new Date(anno, mese - 1, giorno);
 
     const nuovaPersona = { nome, cognome, dataNascita: nuovaData };
+        const db = await dbPromise;
+    await db.executeSql(
+      'INSERT INTO persone (nome, cognome, dataDiNascita, email) VALUES (?, ?, ?, ?)',
+      [nome, cognome, nuovaDataDiNascita.toISOString(), email]
+    );
     addPerson(nuovaPersona);
     navigation.goBack();
   };
@@ -397,6 +415,39 @@ const AggiungiPersona = ({ navigation }) => {
 const Stack = createStackNavigator();
 
 const App = () => {
+
+
+  React.useEffect(() => {
+    async function prepareDB() {
+      try {
+        const db = await dbPromise;
+        await db.transaction(tx => {
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS eventi (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              titolo TEXT,
+              data TEXT,
+              descrizione TEXT
+            );`
+          );
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS persone (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nome TEXT,
+              cognome TEXT,
+              dataDiNascita TEXT
+              
+            );`
+          );
+        });
+      } catch (error) {
+        console.error('Errore nella creazione delle tabelle:', error);
+      }
+    }
+
+    prepareDB();
+  }, []);
+
   const [events, setEvents] = useState([]);
   const [people, setPeople] = useState([]);
   const addEvent = (newEvent) => {
@@ -551,5 +602,7 @@ plus: {
 
 
 });
+
+export default App;
 
 export default App;
