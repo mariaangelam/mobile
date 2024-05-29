@@ -4,7 +4,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 
@@ -86,7 +86,7 @@ const AggiungiEvento = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiEvento = async () => { {
+  const handleAggiungiEvento = async () => { 
     // Converte la data in una stringa
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
@@ -416,6 +416,15 @@ const Stack = createStackNavigator();
 
 const App = () => {
 
+  const [events, setEvents] = useState([]);
+  const [people, setPeople] = useState([]);
+  const addEvent = (newEvent) => {
+    setEvents([...events, newEvent]);
+  };
+    const addPerson = (newPeople) => {
+    setPeople([...people, newPeople]);
+  };
+
 
   React.useEffect(() => {
     async function prepareDB() {
@@ -448,14 +457,7 @@ const App = () => {
     prepareDB();
   }, []);
 
-  const [events, setEvents] = useState([]);
-  const [people, setPeople] = useState([]);
-  const addEvent = (newEvent) => {
-    setEvents([...events, newEvent]);
-  };
-    const addPerson = (newPeople) => {
-    setPeople([...people, newPeople]);
-  };
+
  
 
   return (
@@ -604,5 +606,3 @@ plus: {
 });
 
 export default App;
-
-
