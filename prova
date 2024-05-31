@@ -4,18 +4,13 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch  } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 
 const EventsContext = createContext();
 const PeopleContext = createContext();
 
-
-SQLite.enablePromise(true);
-
-
-const dbPromise = SQLite.openDatabase({ name: 'mio_database.db', location: 'default' });
 
 
 const Statistiche = () => (
@@ -72,6 +67,9 @@ const AggiungiEvento = ({ navigation }) => {
   const [isDataValid, setIsDataValid] = useState(true);
   const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
   const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  
+  const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
 
   const isValidDate = (day, month, year) => {
     const data = new Date(year, month - 1, day);
@@ -86,7 +84,7 @@ const AggiungiEvento = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiEvento = async () => { 
+  const handleAggiungiEvento = () => { 
     // Converte la data in una stringa
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
@@ -106,18 +104,12 @@ const AggiungiEvento = ({ navigation }) => {
       return;
     }
 
-    
     setIsDataValid(true);
 
     // Crea la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { titolo, data: nuovaData, descrizione };
-    const db = await dbPromise;
-    await db.executeSql(
-      'INSERT INTO eventi (titolo, data, descrizione) VALUES (?, ?, ?)',
-      [titolo, nuovaData.toISOString(), descrizione]
-    );
+    const nuovoEvento = { titolo, data: nuovaData, descrizione, notificationsEnabled };
 
     addEvent(nuovoEvento);
     navigation.goBack();
@@ -164,6 +156,17 @@ const AggiungiEvento = ({ navigation }) => {
       />
       {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
 
+      <View style={styles.notificationContainer}>
+        <Text>Notifica:</Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#6200ea" }}
+          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+
+          onValueChange={toggleNotifications}
+          value={notificationsEnabled}
+        />
+      </View>
+
       <View style={styles.addButtonContainer}>
         <TouchableOpacity
           onPress={handleAggiungiEvento}
@@ -175,7 +178,6 @@ const AggiungiEvento = ({ navigation }) => {
     </View>
   );
 };
-
 const TopTab = createMaterialTopTabNavigator();
 
 const Dashboard = ({ navigation }) => {
@@ -237,11 +239,48 @@ const { people } = useContext(PeopleContext);
 
 
 
-const Notifiche = () => (
-  <View>
-    <Text>Schermata Notifiche</Text>
-  </View>
-);
+const Notifiche = () => {
+  const { events } = useContext(EventsContext);
+  // Ottieni la data odierna
+  const today = new Date();
+
+  const isSameDay = (date1, date2) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
+  // Filtra gli eventi che hanno abilitato le notifiche e che sono ad un giorno dalla data odierna
+  const filteredEvents = events.filter(event => {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1); // Incrementa la data odierna di un giorno
+
+    // Verifica se l'evento ha abilitato le notifiche e se la sua data è uguale a quella di domani
+    return event.notificationsEnabled && isSameDay(event.data, tomorrow);
+  });
+
+ 
+  
+
+  const renderEvent = ({ item }) => (
+    <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={filteredEvents}
+        renderItem={renderEvent}
+        keyExtractor={(item, index) => index.toString()}
+      />
+    </View>
+  );
+};
 
 const BottomTab = createBottomTabNavigator();
 
@@ -351,11 +390,7 @@ const AggiungiPersona = ({ navigation }) => {
     const nuovaData = new Date(anno, mese - 1, giorno);
 
     const nuovaPersona = { nome, cognome, dataNascita: nuovaData };
-        const db = await dbPromise;
-    await db.executeSql(
-      'INSERT INTO persone (nome, cognome, dataDiNascita, email) VALUES (?, ?, ?, ?)',
-      [nome, cognome, nuovaDataDiNascita.toISOString(), email]
-    );
+ 
     addPerson(nuovaPersona);
     navigation.goBack();
   };
@@ -404,7 +439,7 @@ const AggiungiPersona = ({ navigation }) => {
           onPress={handleAggiungiPersona}
           style={styles.addButton1}
         >
-          <Text style={styles.buttonText}>Aggiungi Persona</Text>
+          <Text style={styles.addButton1}>Aggiungi Persona</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -426,37 +461,7 @@ const App = () => {
   };
 
 
-  React.useEffect(() => {
-    async function prepareDB() {
-      try {
-        const db = await dbPromise;
-        await db.transaction(tx => {
-          tx.executeSql(
-            `CREATE TABLE IF NOT EXISTS eventi (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              titolo TEXT,
-              data TEXT,
-              descrizione TEXT
-            );`
-          );
-          tx.executeSql(
-            `CREATE TABLE IF NOT EXISTS persone (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              nome TEXT,
-              cognome TEXT,
-              dataDiNascita TEXT
-              
-            );`
-          );
-        });
-      } catch (error) {
-        console.error('Errore nella creazione delle tabelle:', error);
-      }
-    }
-
-    prepareDB();
-  }, []);
-
+ 
 
  
 
