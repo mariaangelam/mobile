@@ -1,0 +1,53 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, Button } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const App = () => {
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    // Quando l'app viene avviata, carica i dati salvati
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const tasksJson = await AsyncStorage.getItem('tasks');
+      if (tasksJson !== null) {
+        // Se ci sono dati salvati, deserializzali e imposta lo stato
+        setTasks(JSON.parse(tasksJson));
+      }
+    } catch (error) {
+      console.error('Errore nel caricare i task:', error);
+    }
+  };
+
+  const saveTasks = async () => {
+    try {
+      // Serializza i task in JSON e salvali sul dispositivo
+      const tasksJson = JSON.stringify(tasks);
+      await AsyncStorage.setItem('tasks', tasksJson);
+    } catch (error) {
+      console.error('Errore nel salvare i task:', error);
+    }
+  };
+
+  const addTask = () => {
+    const newTask = { id: tasks.length + 1, title: 'Nuovo Task', completed: false };
+    setTasks([...tasks, newTask]);
+  };
+
+  return (
+    <View>
+      <Text>Tasks:</Text>
+      {tasks.map(task => (
+        <Text key={task.id}>{task.title}</Text>
+      ))}
+      <Button title="Aggiungi Task" onPress={addTask} />
+      <Button title="Salva Task" onPress={saveTasks} />
+    </View>
+  );
+};
+
+export default App;
+
