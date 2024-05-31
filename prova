@@ -268,7 +268,7 @@ const Notifiche = () => {
   });
 
  
-  const numFilteredEvents = filteredEvents.length;
+ 
 
   const renderEvent = ({ item }) => (
     <View style={styles.eventContainer}>
@@ -360,16 +360,16 @@ const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
       }}
     />
     <BottomTab.Screen
-      name="Notifiche"
-      component={Notifiche}
-      options={{
-        tabBarLabel: 'Notifiche',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialCommunityIcons name="bell" color={color} size={size} />
-        ),
-        tabBarBadge: numFilteredEvents,
-      }}
-    />
+  name="Notifiche"
+  component={Notifiche}
+  options={({ route }) => ({
+    tabBarLabel: 'Notifiche',
+    tabBarIcon: ({ color, size }) => (
+      <MaterialCommunityIcons name="bell" color={color} size={size} />
+    ),
+    tabBarBadge: numFilteredEvents > 0 ? numFilteredEvents : null,
+  })}
+/>
   </BottomTab.Navigator>
   );
 };
