@@ -1,0 +1,53 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, Button } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+
+const App = () => {
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    // Quando l'app viene avviata, carica i dati salvati
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const fileUri = `${FileSystem.documentDirectory}tasks.json`;
+      const fileExists = await FileSystem.getInfoAsync(fileUri);
+
+      if (fileExists.exists) {
+        const fileContents = await FileSystem.readAsStringAsync(fileUri);
+        setTasks(JSON.parse(fileContents));
+      }
+    } catch (error) {
+      console.error('Errore nel caricare i task:', error);
+    }
+  };
+
+  const saveTasks = async () => {
+    try {
+      const fileUri = `${FileSystem.documentDirectory}tasks.json`;
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Errore nel salvare i task:', error);
+    }
+  };
+
+  const addTask = () => {
+    const newTask = { id: tasks.length + 1, title: 'Nuovo Task', completed: false };
+    setTasks([...tasks, newTask]);
+  };
+
+  return (
+    <View>
+      <Text>Tasks:</Text>
+      {tasks.map(task => (
+        <Text key={task.id}>{task.title}</Text>
+      ))}
+      <Button title="Aggiungi Task" onPress={addTask} />
+      <Button title="Salva Task" onPress={saveTasks} />
+    </View>
+  );
+};
+
+export default App;
