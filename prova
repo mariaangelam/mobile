@@ -29,6 +29,12 @@ const GestisciEvento = () => (
  const Eventi = () => {
  const { events } = useContext(EventsContext);
  const [search, setSearch] = useState('');
+
+  // Funzione per filtrare gli eventi in base al testo della searchbar
+  const filteredEvents = events.filter(event =>
+    event.titolo.toLowerCase().includes(search.toLowerCase())
+  );
+
   const renderEvento = ({ item }) => (
        <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
@@ -50,7 +56,7 @@ const GestisciEvento = () => (
 
       <View style={styles.eventsMargin}>
         <FlatList
-          data={events}
+          data={filteredEvents}
           renderItem={renderEvento}
           keyExtractor={(item, index) => index.toString()}
         />
@@ -258,10 +264,11 @@ const Notifiche = () => {
 
     // Verifica se l'evento ha abilitato le notifiche e se la sua data è uguale a quella di domani
     return event.notificationsEnabled && isSameDay(event.data, tomorrow);
+
   });
 
  
-  
+  const numFilteredEvents = filteredEvents.length;
 
   const renderEvent = ({ item }) => (
     <View style={styles.eventContainer}>
@@ -284,7 +291,26 @@ const Notifiche = () => {
 
 const BottomTab = createBottomTabNavigator();
 
-const TabNavigator = () => (
+const TabNavigator = () => {
+const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
+
+  
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+     const isSameDay = (date1, date2) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
+  const filteredEvents = events.filter(event => event.notificationsEnabled && isSameDay(event.data, tomorrow));
+
+  const numFilteredEvents = filteredEvents.length; 
+
+    
+  return (
   <BottomTab.Navigator
     initialRouteName="Dashboard"
     screenOptions={{
@@ -341,11 +367,13 @@ const TabNavigator = () => (
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name="bell" color={color} size={size} />
         ),
-        tabBarBadge: 3,
+        tabBarBadge: numFilteredEvents,
       }}
     />
   </BottomTab.Navigator>
-);
+  );
+};
+
 const AggiungiPersona = ({ navigation }) => {
   const { addPerson } = useContext(PeopleContext);
   const [nome, setNome] = useState('');
