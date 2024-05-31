@@ -1,0 +1,658 @@
+//import per la gestione dello stato e del contesto 
+import React, { useState, createContext, useContext } from 'react';
+
+//per la barra di navigazione inferiore 
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+//per la barra di navigazione superiore 
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+
+//per la navigazione a stack 
+import { createStackNavigator } from '@react-navigation/stack';
+
+//per la barra di navigazione  
+import { NavigationContainer } from '@react-navigation/native';
+
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { SearchBar } from 'react-native-elements';
+
+//per il database locale
+import SQLite from 'react-native-sqlite-storage';
+
+
+
+const EventsContext = createContext();
+const PeopleContext = createContext();
+
+
+
+SQLite.enablePromise(true); //SQLite ci permette di interfacciare con il db 
+//crea la connessione (incapsulata in una Promise)
+const dbPromise = SQLite.openDatabase({ name: 'mio_database.db', location: 'default' }); 
+
+//schermata STATISTICHE
+const Statistiche = () => (
+  <View>
+    <Text>Schermata Statistiche</Text>
+  </View>
+);
+
+//schermata MODIFICA 
+const GestisciEvento = () => (
+  <View>
+    <Text>Schermata Gestisci Evento</Text>
+  </View>
+);
+
+//schermata EVENTI
+ const Eventi = () => {
+ const { events } = useContext(EventsContext);
+ // search memorizza il valore attuale, setSearch è la funzione per aggiornare search 
+ //useState per aggiungere lo stato locale
+ const [search, setSearch] = useState('');
+ //layout di evento aggiunto
+  const renderEvento = ({ item }) => (
+       <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+    </View>
+  );
+
+  return (
+    
+   <View style={styles.eventsMargin}>
+    <SearchBar
+      placeholder="Cerca evento..."
+      onChangeText={setSearch} // Funzione chiamata ogni volta che il testo di input cambia.
+      value={search} // Valore attuale del campo di ricerca
+      containerStyle={styles.searchBarContainer}
+      inputContainerStyle={styles.searchBarInputContainer}
+    />
+
+
+      <View style={styles.eventsMargin}>
+        <FlatList //Lista degli eventi da visualizzare
+          data={events}
+          renderItem={renderEvento}
+          // Funzione che fornisce una chiave univoca per ogni elemento della lista
+          keyExtractor={(item, index) => index.toString()} 
+        />
+      </View>
+    </View>
+  );
+};
+
+const AggiungiEvento = ({ navigation }) => {
+
+  const { addEvent } = useContext(EventsContext);
+  //useState per l'aggiunta e controllo dell'evento 
+  const [titolo, setTitolo] = useState('');
+  const [dataSelezionata, setDataSelezionata] = useState('');
+  const [descrizione, setDescrizione] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
+  const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+
+  //funzione controllo data
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+  //funzione controllo campo vuoto
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+  const handleAggiungiEvento = async () => { 
+    // Converte la data in una stringa
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+    // controllo la validità della data
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+
+    // Controllo se i campi sono vuoti 
+    setIsTitoloEmpty(isFieldEmpty(titolo));
+    setIsDescrizioneEmpty(isFieldEmpty(descrizione));
+    if (isFieldEmpty(titolo) || isFieldEmpty(descrizione)) {
+      return;
+    }
+
+    
+    setIsDataValid(true);
+
+    // Crea la nuova data
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+    //salviamo l'evento nel db 
+    const nuovoEvento = { titolo, data: nuovaData, descrizione };
+    const db = await dbPromise;
+    await db.executeSql(
+      'INSERT INTO eventi (titolo, data, descrizione) VALUES (?, ?, ?)',
+      [titolo, nuovaData.toISOString(), descrizione]
+    );
+
+
+    addEvent(nuovoEvento); //aggiungiamo l'evento 
+    navigation.goBack();
+  };
+
+  //layout evento in aggiunta e verifica dei campi 
+  return (
+    <View style={styles.container}>
+    <ScrollView>
+      <Text style={styles.label}>Titolo:</Text>
+      <TextInput
+        style={[styles.input, isTitoloEmpty && styles.invalidInput]}
+        value={titolo}
+        onChangeText={setTitolo}
+        placeholder="Inserisci il titolo"
+        placeholderTextColor="#888"
+      />
+      {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+      
+      <Text style={styles.label}>Data:</Text>
+      <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+        value={dataSelezionata}
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+            setDataSelezionata(text + '/');
+          } else {
+            setDataSelezionata(text);
+          }
+        }}
+      />
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+      <Text style={styles.label}>Descrizione:</Text>
+      <TextInput
+        style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
+        value={descrizione}
+        onChangeText={setDescrizione}
+        placeholder="Inserisci la descrizione"
+        placeholderTextColor="#888"
+        multiline={true}
+        numberOfLines={4}
+      />
+      {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAggiungiEvento}
+          style={styles.addButton1}
+        >
+          <Text style={styles.buttonText}>Aggiungi Evento</Text>
+        </TouchableOpacity>
+      </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+//Barra navigazione superiore 
+const TopTab = createMaterialTopTabNavigator();
+
+//schermata DASHBOARD
+const Dashboard = ({ navigation }) => {
+  const { events } = useContext(EventsContext);
+const { people } = useContext(PeopleContext);
+//layout singolo evento con bottone per aggiunta persona 
+ const renderEvento = ({ item }) => (
+  <View style={styles.eventContainer}>
+    <Text style={styles.eventTitle}>{item.titolo}</Text>
+    <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+    <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+    <TouchableOpacity onPress={() => navigation.navigate('AggiungiPersona')} style={[styles.plus, styles.descriptionSpacer]}>
+      <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
+    </TouchableOpacity>
+  </View>
+);
+
+  //layout eventi passati, futuri e bottone 
+  return (
+    <View style={{ flex: 1 }}>
+      <TopTab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: '#fff',
+          tabBarInactiveTintColor: '#ccc',
+          tabBarStyle: { backgroundColor: '#6200ea' },
+          tabBarIndicatorStyle: { backgroundColor: '#fff' },
+        }}
+      >
+        <TopTab.Screen name="Eventi Passati" component={() => (
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
+            <FlatList
+              data={events.filter(event => event.data < new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+        <TopTab.Screen name="Eventi Futuri" component={() => (
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
+            <FlatList
+              data={events.filter(event => event.data >= new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+      </TopTab.Navigator>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AggiungiEvento')}
+      >
+        <MaterialCommunityIcons name="plus" color="#fff" size={24} />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+
+
+//schermata NOTIFICHE 
+const Notifiche = () => (
+  <View>
+    <Text>Schermata Notifiche</Text>
+  </View>
+);
+
+//barra navigazione inferiore 
+const BottomTab = createBottomTabNavigator();
+
+const TabNavigator = () => (
+  <BottomTab.Navigator
+    initialRouteName="Dashboard"
+    screenOptions={{
+      tabBarActiveTintColor: '#6200ea',
+      tabBarInactiveTintColor: 'gray',
+      tabBarStyle: { backgroundColor: '#ffff' },
+    }}
+  >
+    <BottomTab.Screen
+      name="Dashboard"
+      component={Dashboard}
+      options={{
+        tabBarLabel: 'Dashboard',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Eventi"
+      component={Eventi}
+      options={{
+        tabBarLabel: 'Eventi',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="calendar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Modifica Evento"
+      component={GestisciEvento}
+      options={{
+        tabBarLabel: 'Modifica',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="pencil" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Statistiche"
+      component={Statistiche}
+      options={{
+        tabBarLabel: 'Statistiche',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Notifiche"
+      component={Notifiche}
+      options={{
+        tabBarLabel: 'Notifiche',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="bell" color={color} size={size} />
+        ),
+        tabBarBadge: 3,
+      }}
+    />
+  </BottomTab.Navigator>
+);
+//Fine barra navigazione inferiore 
+
+
+const AggiungiPersona = ({ navigation }) => {
+  const { addPerson } = useContext(PeopleContext);
+  //useState per l'aggiunta e controllo di persona 
+  const [nome, setNome] = useState('');
+  const [cognome, setCognome] = useState('');
+  const [dataNascita, setDataNascita] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isNomeEmpty, setIsNomeEmpty] = useState(false);
+  const [isCognomeEmpty, setIsCognomeEmpty] = useState(false);
+
+  //funzione controllo data
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+  //funzione controllo campo vuoto
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+  const handleAggiungiPersona = async () => { 
+
+    //parsing data di nascita 
+    const dataFormattata = dataNascita.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+
+    //controllo data 
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+    //controllo campi vuoti 
+    setIsNomeEmpty(isFieldEmpty(nome));
+    setIsCognomeEmpty(isFieldEmpty(cognome));
+    if (isFieldEmpty(nome) || isFieldEmpty(cognome)) {
+      return;
+    }
+
+    setIsDataValid(true);
+
+    //salvataggio nel db 
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+    const nuovaPersona = { nome, cognome, dataNascita: nuovaData };
+        const db = await dbPromise;
+    await db.executeSql(
+      'INSERT INTO persone (nome, cognome, dataDiNascita, email) VALUES (?, ?, ?, ?)',
+      [nome, cognome, nuovaDataDiNascita.toISOString(), email]
+    );
+
+
+    addPerson(nuovaPersona); //aggiunta persona all'evento
+    navigation.goBack();
+  };
+  
+
+  //layout aggiungi persona e bottone
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>Nome:</Text>
+      <TextInput
+        style={[styles.input, isNomeEmpty && styles.invalidInput]}
+        value={nome}
+        onChangeText={setNome}
+        placeholder="Inserisci il nome"
+        placeholderTextColor="#888"
+      />
+      {isNomeEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Cognome:</Text>
+      <TextInput
+        style={[styles.input, isCognomeEmpty && styles.invalidInput]}
+        value={cognome}
+        onChangeText={setCognome}
+        placeholder="Inserisci il cognome"
+        placeholderTextColor="#888"
+      />
+      {isCognomeEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Data di nascita:</Text>
+      <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+        value={dataNascita}
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataNascita.length) {
+            setDataNascita(text + '/');
+          } else {
+            setDataNascita(text);
+          }
+        }}
+      />
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAggiungiPersona}
+          style={styles.addButton1}
+        >
+          <Text style={styles.buttonText}>Aggiungi Persona</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+
+const Stack = createStackNavigator();
+
+const App = () => {
+
+  const [events, setEvents] = useState([]);
+  const [people, setPeople] = useState([]);
+  const addEvent = (newEvent) => {
+    setEvents([...events, newEvent]);
+  };
+    const addPerson = (newPeople) => {
+    setPeople([...people, newPeople]);
+  };
+
+
+  React.useEffect(() => {
+    async function prepareDB() {
+      try {
+        const db = await dbPromise;
+        await db.transaction(tx => {
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS eventi (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              titolo TEXT,
+              data TEXT,
+              descrizione TEXT
+            );`
+          );
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS persone (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nome TEXT,
+              cognome TEXT,
+              dataDiNascita TEXT
+              
+            );`
+          );
+        });
+      } catch (error) {
+        console.error('Errore nella creazione delle tabelle:', error);
+      }
+    }
+
+    prepareDB();
+  }, []);
+
+
+ 
+
+  return (
+    <EventsContext.Provider value={{ events, addEvent }}>
+    <PeopleContext.Provider value={{ people, addPerson }}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen
+            name="Main"
+            component={TabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AggiungiEvento"
+            component={AggiungiEvento}
+            options={{ title: 'Aggiungi Evento' }}
+          />
+          <Stack.Screen name="AggiungiPersona" component={AggiungiPersona} options={{ title: 'Aggiungi Persona' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+      </PeopleContext.Provider>
+    </EventsContext.Provider>
+  );
+};
+
+
+
+//STILE
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+
+  },
+
+  label: {
+    fontSize: 16,
+    marginVertical: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#6200ea',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventContainer: {
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#e6e6fa',
+    marginLeft: 20,
+    marginRight: 20,
+    borderWidth: 2,
+    borderColor: '#4b0082',
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  eventDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  eventDescription: {
+    fontSize: 14,
+    fontStyle: 'italic', // Imposta il font in corsivo
+  },
+    invalidInput: {
+    borderColor: 'red', // Cambia il colore del bordo in rosso se la data non è valida
+  },
+  errorText: {
+    color: 'red', // Colore rosso per il testo dell'errore
+    fontSize: 14, // Dimensione del font per il testo dell'errore
+    marginTop: -10, // Spostamento verso l'alto per posizionare meglio il testo
+    marginBottom: 10, // Spazio sotto il testo dell'errore
+  },
+   addButtonContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addButton1: {
+    backgroundColor: '#6200ea', // Colore viola
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 5,
+    
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+plus: {
+    position: 'absolute', // Posiziona l'omino in modo assoluto rispetto al suo contenitore
+    bottom: 5, // Spazio dal basso
+    right: 10, // Spazio da destra
+    backgroundColor: '#e6e6fa',
+    borderRadius: 10,
+    width: 30, // Larghezza del contenitore
+    height: 30, // Altezza del contenitore
+        justifyContent: 'center', // Centra verticalmente l'icona all'interno del contenitore
+    alignItems: 'center',
+},
+  tabContainer: {
+    flex: 1,
+  },
+  eventsMargin: {
+    marginTop: 20, // Aggiungi il margine superiore per distanziare gli eventi dai tab superiori
+  },
+  searchBarContainer: {
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    paddingHorizontal: 10,
+        width: '90%', // Imposta la larghezza della barra di ricerca al 90% del contenitore
+    alignSelf: 'center', // Allinea la barra di ricerca al centro del contenitore
+     borderRadius: 20,
+  
+  },
+  searchBarInputContainer: {
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    height: 30,
+   
+  },
+    descriptionSpacer: {
+    marginBottom: 10, // Aggiungi uno spazio inferiore di 10 punti tra la descrizione e l'omino "plus"
+  },
+
+
+});
+
+export default App;
+
