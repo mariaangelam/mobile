@@ -1,0 +1,53 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, Button } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const App = () => {
+  const [evento, setEvento] = useState([]);
+
+  useEffect(() => {
+    caricaEvento();
+  }, []);
+
+  const caricaEvento = async () => {
+    try {
+      const storedEventi = await AsyncStorage.getItem('eventi');
+      if (storedEventi) {
+        setEvento(JSON.parse(storedEventi));
+      }
+    } catch (error) {
+      console.error('Errore nel caricare gli eventi:', error);
+    }
+  };
+
+  const saveEvento = async () => {
+    try {
+      await AsyncStorage.setItem('eventi', JSON.stringify(evento));
+    } catch (error) {
+      console.error('Errore nel salvare gli eventi:', error);
+    }
+  };
+
+  const addEvento = () => {
+    const newEvento = { 
+      id: evento.length + 1, 
+      title: 'Nuovo Evento', 
+      completed: false 
+    };
+    setEvento([...evento, newEvento]);
+  };
+
+  return (
+    <View>
+      <Text>Evento:</Text>
+      {evento.map(evento => (
+        <Text key={evento.id}>{evento.title}</Text>
+      ))}
+      
+      <Button title="Aggiungi Evento" onPress={addEvento} />
+      <Button title="Salva Evento" onPress={saveEvento} />
+    </View>
+  );
+};
+
+export default App;
