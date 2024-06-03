@@ -172,35 +172,48 @@ const { addEvent } = useContext(EventsContext);
 
 const DettagliEvento = ({ route }) => {
   const { evento } = route.params;
+   
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Titolo:</Text>
+ return (
+  <View style={styles.container}>
+    <View style={styles.row}>
+      <Text style={styles.label1}>Titolo:</Text>
       <Text>{evento.titolo}</Text>
-
-      <Text style={styles.label}>Data:</Text>
-      <Text>{evento.data.toLocaleDateString()}</Text>
-
-      <Text style={styles.label}>Orario:</Text>
-      <Text>{evento.orario}</Text>
-
-      <Text style={styles.label}>Luogo:</Text>
-      <Text>{evento.luogo}</Text>
-
-      <Text style={styles.label}>Descrizione:</Text>
-      <Text>{evento.descrizione}</Text>
-
-      <Text style={styles.label}>Notifiche:</Text>
-      <Text>{evento.notificationsEnabled ? 'Abilitate' : 'Disabilitate'}</Text>
-
-            <TouchableOpacity
-        style={styles.addButton1}
-        onPress={() => navigation.navigate('ModificaEvento', { evento })}
-      >
-        <Text>Modifica</Text>
-      </TouchableOpacity>
     </View>
-  );
+
+    <View style={styles.row}>
+      <Text style={styles.label1}>Data:</Text>
+      <Text>{evento.data.toLocaleDateString()}</Text>
+    </View>
+
+    <View style={styles.row}>
+      <Text style={styles.label1}>Orario:</Text>
+      <Text>{evento.orario}</Text>
+    </View>
+
+    <View style={styles.row}>
+      <Text style={styles.label1}>Luogo:</Text>
+      <Text>{evento.luogo}</Text>
+    </View>
+
+    <View style={styles.row}>
+      <Text style={styles.label1}>Descrizione:</Text>
+      <Text>{evento.descrizione}</Text>
+    </View>
+
+    <View style={styles.row}>
+      <Text style={styles.label1}>Notifiche:</Text>
+      <Text>{evento.notificationsEnabled ? 'Abilitate' : 'Disabilitate'}</Text>
+    </View>
+
+    <TouchableOpacity
+      style={styles.addButton1}
+      onPress={() => navigation.navigate('ModificaEvento', { evento })}
+    >
+      <Text>Modifica</Text>
+    </TouchableOpacity>
+  </View>
+);
 };
 
 
@@ -231,8 +244,8 @@ const navigation = useNavigation();
   );
 
   return (
-   <View style={styles.eventsMargin}>
-   <ScrollView>
+   <View style={styles.contenitoreEventi}>
+  
     <SearchBar
       placeholder="Cerca evento..."
       onChangeText={setSearch}
@@ -241,15 +254,13 @@ const navigation = useNavigation();
       inputContainerStyle={styles.searchBarInputContainer}
     />
 
-
-      <View style={styles.eventsMargin}>
-        <FlatList
-          data={filteredEvents}
-          renderItem={renderEvento}
-          keyExtractor={(item, index) => index.toString()}
-        />
-      </View>
-      </ScrollView>
+    <FlatList
+      data={filteredEvents}
+      renderItem={renderEvento}
+      keyExtractor={(item, index) => index.toString()}
+      contentContainerStyle={styles.flatListContentContainer}
+    />
+      
     </View>
   );
 };
@@ -707,6 +718,11 @@ const App = () => {
             options={{ title: 'Aggiungi Evento' }}
           />
           <Stack.Screen name="AggiungiPersona" component={AggiungiPersona} options={{ title: 'Aggiungi Persona' }} />
+          <Stack.Screen
+  name="Eventi"
+  component={Eventi}
+  options={{ title: 'Eventi' }}
+/>
             <Stack.Screen
               name="DettagliEvento"
               component={DettagliEvento}
@@ -720,7 +736,7 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+ container: {
     flex: 1,
     padding: 20,
 
@@ -817,7 +833,14 @@ plus: {
   eventsMargin: {
     marginTop: 20, // Aggiungi il margine superiore per distanziare gli eventi dai tab superiori
   },
+  contenitoreEventi: {
+    flex: 1,
+  },
+  flatListContentContainer: {
+    padding: 16, 
+  },
   searchBarContainer: {
+    margin: 10,
     backgroundColor: 'white',
     borderBottomColor: 'transparent',
     borderTopColor: 'transparent',
