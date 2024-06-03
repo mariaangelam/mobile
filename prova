@@ -4,9 +4,10 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Keyboard } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
+import { useNavigation } from '@react-navigation/native';
 
 const EventsContext = createContext();
 const PeopleContext = createContext();
@@ -83,6 +84,7 @@ const { addEvent } = useContext(EventsContext);
 
   return (
     <View style={styles.container}>
+    <ScrollView>
       <Text style={styles.label}>Titolo:</Text>
       <TextInput
         style={[styles.input, isTitoloEmpty && styles.invalidInput]}
@@ -162,19 +164,51 @@ const { addEvent } = useContext(EventsContext);
           <Text style={styles.buttonText}>Aggiungi Evento</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+
+const DettagliEvento = ({ route }) => {
+  const { evento } = route.params;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>Titolo:</Text>
+      <Text>{evento.titolo}</Text>
+
+      <Text style={styles.label}>Data:</Text>
+      <Text>{evento.data.toLocaleDateString()}</Text>
+
+      <Text style={styles.label}>Orario:</Text>
+      <Text>{evento.orario}</Text>
+
+      <Text style={styles.label}>Luogo:</Text>
+      <Text>{evento.luogo}</Text>
+
+      <Text style={styles.label}>Descrizione:</Text>
+      <Text>{evento.descrizione}</Text>
+
+      <Text style={styles.label}>Notifiche:</Text>
+      <Text>{evento.notificationsEnabled ? 'Abilitate' : 'Disabilitate'}</Text>
+
+            <TouchableOpacity
+        style={styles.addButton1}
+        onPress={() => navigation.navigate('ModificaEvento', { evento })}
+      >
+        <Text>Modifica</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 
 
-
-
-
  const Eventi = () => {
  const { events } = useContext(EventsContext);
  const [search, setSearch] = useState('');
-
+const navigation = useNavigation();
 
   // Funzione per filtrare gli eventi in base al testo della searchbar
   const filteredEvents = events.filter(event =>
@@ -188,7 +222,7 @@ const { addEvent } = useContext(EventsContext);
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
       <TouchableOpacity
-        onPress={() => mostraDettagli(item)} 
+        onPress={() => navigation.navigate('DettagliEvento', { evento: item })}
         style={styles.dettagli}
       >
         <Text>Dettagli</Text>
@@ -198,6 +232,7 @@ const { addEvent } = useContext(EventsContext);
 
   return (
    <View style={styles.eventsMargin}>
+   <ScrollView>
     <SearchBar
       placeholder="Cerca evento..."
       onChangeText={setSearch}
@@ -214,6 +249,7 @@ const { addEvent } = useContext(EventsContext);
           keyExtractor={(item, index) => index.toString()}
         />
       </View>
+      </ScrollView>
     </View>
   );
 };
@@ -276,6 +312,7 @@ const AggiungiEvento = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+    <ScrollView>
       <Text style={styles.label}>Titolo:</Text>
       <TextInput
         style={[styles.input, isTitoloEmpty && styles.invalidInput]}
@@ -335,6 +372,7 @@ const AggiungiEvento = ({ navigation }) => {
           <Text style={styles.buttonText}>Aggiungi Evento</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </View>
   );
 };
@@ -583,6 +621,7 @@ const AggiungiPersona = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+    <ScrollView>
       <Text style={styles.label}>Nome:</Text>
       <TextInput
         style={[styles.input, isNomeEmpty && styles.invalidInput]}
@@ -628,7 +667,7 @@ const AggiungiPersona = ({ navigation }) => {
           <Text style={styles.addButton1}>Aggiungi Persona</Text>
         </TouchableOpacity>
       </View>
-
+    </ScrollView>
     </View>
   );
 };
@@ -658,7 +697,7 @@ const App = () => {
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen
-            name="Main"
+            name="Dahsboard"
             component={TabNavigator}
             options={{ headerShown: false }}
           />
@@ -668,6 +707,11 @@ const App = () => {
             options={{ title: 'Aggiungi Evento' }}
           />
           <Stack.Screen name="AggiungiPersona" component={AggiungiPersona} options={{ title: 'Aggiungi Persona' }} />
+            <Stack.Screen
+              name="DettagliEvento"
+              component={DettagliEvento}
+              options={{ title: 'Dettagli Evento' }}
+            />
         </Stack.Navigator>
       </NavigationContainer>
       </PeopleContext.Provider>
