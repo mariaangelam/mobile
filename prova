@@ -4,7 +4,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch  } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, Keyboard } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 
@@ -19,27 +19,180 @@ const Statistiche = () => (
   </View>
 );
 
-const GestisciEvento = () => (
-  <View>
-    <Text>Schermata Gestisci Evento</Text>
-  </View>
-);
+const GestisciEvento = () => {
+const { addEvent } = useContext(EventsContext);
+  const [titolo, setTitolo] = useState('');
+  const [dataSelezionata, setDataSelezionata] = useState('');
+  const [descrizione, setDescrizione] = useState('');
+  const [luogo, setLuogo] = useState('');
+  const [orario, setOrario] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
+  const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+  const [isLuogoEmpty, setIsLuogoEmpty] = useState(false);
+  const [isOrarioEmpty, setIsOrarioEmpty] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  
+  const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
+
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+  const handleAggiungiEvento = () => { 
+    // Converte la data in una stringa
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+    // controllo la validità della data
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+
+    // Check if fields are empty
+    setIsTitoloEmpty(isFieldEmpty(titolo));
+    setIsDescrizioneEmpty(isFieldEmpty(descrizione));
+    setIsLuogoEmpty(isFieldEmpty(luogo));
+    setIsOrarioEmpty(isFieldEmpty(orario));
+    if (isFieldEmpty(titolo) || isFieldEmpty(descrizione) || isFieldEmpty(luogo) || isFieldEmpty(orario)) {
+      return;
+    }
+
+    setIsDataValid(true);
+
+    // Crea la nuova data
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+    const nuovoEvento = { titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled };
+
+    addEvent(nuovoEvento);
+ 
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>Titolo:</Text>
+      <TextInput
+        style={[styles.input, isTitoloEmpty && styles.invalidInput]}
+        value={titolo}
+        onChangeText={setTitolo}
+        placeholder="Inserisci il titolo"
+        placeholderTextColor="#888"
+      />
+      {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Data:</Text>
+      <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+         placeholderTextColor="#888"
+        value={dataSelezionata}
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+            setDataSelezionata(text + '/');
+          } else {
+            setDataSelezionata(text);
+          }
+        }}
+      />
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+      <Text style={styles.label}>Orario:</Text>
+      <TextInput
+        style={[styles.input, isOrarioEmpty && styles.invalidInput]}
+        value={orario}
+        onChangeText={setOrario}
+        placeholder="Inserisci l'orario (HH:MM)"
+        placeholderTextColor="#888"
+        keyboardType="numeric"
+      />
+      {isOrarioEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Luogo:</Text>
+      <TextInput
+        style={[styles.input, isLuogoEmpty && styles.invalidInput]}
+        value={luogo}
+        onChangeText={setLuogo}
+        placeholder="Inserisci il luogo"
+        placeholderTextColor="#888"
+      />
+      {isLuogoEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Descrizione:</Text>
+      <TextInput
+        style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
+        value={descrizione}
+        onChangeText={setDescrizione}
+        placeholder="Inserisci la descrizione"
+        placeholderTextColor="#888"
+        multiline={true}
+        numberOfLines={4}
+      />
+      {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <View style={styles.notificationContainer}>
+        <Text>Notifica:</Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#6200ea" }}
+          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+          onValueChange={toggleNotifications}
+          value={notificationsEnabled}
+        />
+      </View>
+
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAggiungiEvento}
+          style={styles.addButton1}
+        >
+          <Text style={styles.buttonText}>Aggiungi Evento</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+
+
+
 
 
  const Eventi = () => {
  const { events } = useContext(EventsContext);
  const [search, setSearch] = useState('');
 
+
   // Funzione per filtrare gli eventi in base al testo della searchbar
   const filteredEvents = events.filter(event =>
     event.titolo.toLowerCase().includes(search.toLowerCase())
   );
+ 
 
   const renderEvento = ({ item }) => (
        <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+      <TouchableOpacity
+        onPress={() => mostraDettagli(item)} 
+        style={styles.dettagli}
+      >
+        <Text>Dettagli</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -138,6 +291,7 @@ const AggiungiEvento = ({ navigation }) => {
         style={[styles.input, !isDataValid && styles.invalidInput]}
         placeholder="Inserisci la data (DD/MM/YYYY)"
         value={dataSelezionata}
+        placeholderTextColor="#888"
         maxLength={10}
         keyboardType="numeric"
         onChangeText={(text) => {
@@ -340,12 +494,16 @@ const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
       }}
     />
     <BottomTab.Screen
-      name="Modifica Evento"
+      name="Aggiungi Evento"
       component={GestisciEvento}
       options={{
-        tabBarLabel: 'Modifica',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialCommunityIcons name="pencil" color={color} size={size} />
+        tabBarLabel: 'Aggiungi',
+        tabBarIcon: ({ color, size, focused }) => (
+        <MaterialCommunityIcons
+              name={focused ? "plus-circle" : "plus"}
+              color={color}
+              size={size}
+            />
         ),
       }}
     />
@@ -470,6 +628,7 @@ const AggiungiPersona = ({ navigation }) => {
           <Text style={styles.addButton1}>Aggiungi Persona</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 };
@@ -536,7 +695,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   textArea: {
-    height: 100,
+    height: 80,
     textAlignVertical: 'top',
   },
   addButton: {
@@ -634,7 +793,19 @@ plus: {
     descriptionSpacer: {
     marginBottom: 10, // Aggiungi uno spazio inferiore di 10 punti tra la descrizione e l'omino "plus"
   },
+dettagli: {
+ backgroundColor: '#6200ea',
+     padding: 8, // Riduci il padding per rendere il pulsante più piccolo
 
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute', // Imposta la posizione assoluta per poterlo spostare
+    bottom: 5, // Posiziona il pulsante in basso
+    right: 5, // Posiziona il pulsante a sinistra
+    borderRadius: 5,
+
+
+},
 
 });
 
