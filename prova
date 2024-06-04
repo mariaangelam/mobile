@@ -175,25 +175,6 @@ const GestisciEvento = () => {
         />
         {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
 
-    
-
-
-          <Text style={styles.label}>Persone:</Text>
-            <View style={styles.personInputContainer}>
-          <TextInput
-            style={[styles.input, styles.personInput]}
-            value={nomePersona}
-            onChangeText={setNomePersona}
-            placeholder="Inserisci il nome"
-            placeholderTextColor="#888"
-          />
-          <TouchableOpacity
-            onPress={handleAggiungiPersona}
-            style={[styles.addButton1, styles.addPersonButton]}
-          >
-            <Text style={styles.buttonText}>Aggiungi</Text>
-          </TouchableOpacity>
-        </View>
     <View style={styles.notificationContainer}>
           <Text>Notifica:</Text>
           <Switch
@@ -217,49 +198,114 @@ const GestisciEvento = () => {
 };
 const DettagliEvento = ({ route }) => {
   const { evento } = route.params;
-   
+  const [editable, setEditable] = useState(false);
+  const { updateEvent } = useContext(EventsContext);
+  const [title, setTitle] = useState(evento.titolo);
+  const [date, setDate] = useState(evento.data.toLocaleDateString('it-IT'));
+  const [time, setTime] = useState(evento.orario);
+  const [location, setLocation] = useState(evento.luogo);
+  const [description, setDescription] = useState(evento.descrizione);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
 
- return (
-  <View style={styles.container}>
-    <View style={styles.eventTitle}>
-      <Text style={styles.label1}>Titolo:</Text>
-      <Text>{evento.titolo}</Text>
+  const handleEditPress = () => {
+    setEditable(true);
+  };
+
+  const handleSavePress = () => {
+    const [day, month, year] = date.split('/');
+    const updatedEvent = {
+      ...evento,
+      titolo: title,
+      data: new Date(year, month - 1, day), // Convert the date string to Date object
+      orario: time,
+      luogo: location,
+      descrizione: description,
+      notificationsEnabled
+    };
+
+    updateEvent(updatedEvent);
+    setEditable(false);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Text style={styles.label1}>Titolo:</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          editable={editable}
+          placeholder="Inserisci titolo"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Data:</Text>
+        <TextInput
+          value={date}
+          onChangeText={setDate}
+          editable={editable}
+          placeholder="Inserisci data"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Orario:</Text>
+        <TextInput
+          value={time}
+          onChangeText={setTime}
+          editable={editable}
+          placeholder="Inserisci orario"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Luogo:</Text>
+        <TextInput
+          value={location}
+          onChangeText={setLocation}
+          editable={editable}
+          placeholder="Inserisci luogo"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Descrizione:</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          editable={editable}
+          placeholder="Inserisci descrizione"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Notifiche:</Text>
+        <Switch
+          value={notificationsEnabled}
+          onValueChange={setNotificationsEnabled}
+          disabled={!editable}
+        />
+      </View>
+
+      {editable ? (
+        <TouchableOpacity style={styles.addButton1} onPress={handleSavePress}>
+          <Text style={styles.buttonText}>Salva</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.addButton1} onPress={handleEditPress}>
+          <Text style={styles.buttonText}>Modifica</Text>
+        </TouchableOpacity>
+      )}
     </View>
-
-    <View style={styles.row}>
-      <Text style={styles.label1}>Data:</Text>
-      <Text>{evento.data.toLocaleDateString()}</Text>
-    </View>
-
-    <View style={styles.row}>
-      <Text style={styles.label1}>Orario:</Text>
-      <Text>{evento.orario}</Text>
-    </View>
-
-    <View style={styles.row}>
-      <Text style={styles.label1}>Luogo:</Text>
-      <Text>{evento.luogo}</Text>
-    </View>
-
-    <View style={styles.row}>
-      <Text style={styles.label1}>Descrizione:</Text>
-      <Text>{evento.descrizione}</Text>
-    </View>
-
-    <View style={styles.row}>
-      <Text style={styles.label1}>Notifiche:</Text>
-      <Text>{evento.notificationsEnabled ? 'Abilitate' : 'Disabilitate'}</Text>
-    </View>
-
-    <TouchableOpacity
-      style={styles.addButton1}
-      onPress={() => navigation.navigate('ModificaEvento', { evento })}
-    >
-      <Text>Modifica</Text>
-    </TouchableOpacity>
-  </View>
-);
+  );
 };
+
 
 
 
@@ -743,12 +789,16 @@ const App = () => {
   };
 
 
- 
+   const updateEvent = (updatedEvent) => {
+    setEvents((prevEvents) => 
+      prevEvents.map(event => event.id === updatedEvent.id ? updatedEvent : event)
+    );
+  };
 
  
 
   return (
-    <EventsContext.Provider value={{ events, addEvent }}>
+    <EventsContext.Provider value={{ events, addEvent, setEvents, updateEvent }}>
     <PeopleContext.Provider value={{ people, addPerson }}>
       <NavigationContainer>
         <Stack.Navigator>
@@ -922,23 +972,7 @@ dettagli: {
     alignItems: 'center',
     marginVertical: 10,
   },
-   personInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  
-  },
- personInput: {
-    flex: 1,
-    height:40,
-  },
-    addPersonButton: {
-    marginLeft:10,
-    marginBottom:10,
-    paddingBottom:10,
-      
 
-
-  },
 });
 
 export default App;
