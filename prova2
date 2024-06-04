@@ -519,47 +519,118 @@ const navigation = useNavigation();
 //bottone dettagli evento
 const DettagliEvento = ({ route }) => {
   const { evento } = route.params;
-  
- return (
-  <View style={styles.container}>
-    <View style={styles.eventTitle}>
-      <Text style={styles.label1}>Titolo:</Text>
-      <Text>{evento.titolo}</Text>
-    </View>
+  const [editable, setEditable] = useState(false);
+  const { updateEvent } = useContext(EventsContext);
+  const [title, setTitle] = useState(evento.titolo);
+  const [date, setDate] = useState(evento.data.toLocaleDateString('it-IT'));
+  const [time, setTime] = useState(evento.orario);
+  const [location, setLocation] = useState(evento.luogo);
+  const [description, setDescription] = useState(evento.descrizione);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
 
-    <View style={styles.row}>
-      <Text style={styles.label1}>Data:</Text>
-      <Text>{evento.data.toLocaleDateString()}</Text>
-    </View>
+  const handleEditPress = () => {
+    setEditable(true);
+  };
 
-    <View style={styles.row}>
-      <Text style={styles.label1}>Orario:</Text>
-      <Text>{evento.orario}</Text>
-    </View>
+  const handleSavePress = () => {
+    const [day, month, year] = date.split('/');
+    const updatedEvent = {
+      ...evento,
+      titolo: title,
+      data: new Date(year, month - 1, day), // Convert the date string to Date object
+      orario: time,
+      luogo: location,
+      descrizione: description,
+      notificationsEnabled
+    };
 
-    <View style={styles.row}>
-      <Text style={styles.label1}>Luogo:</Text>
-      <Text>{evento.luogo}</Text>
-    </View>
+    updateEvent(updatedEvent);
+    setEditable(false);
+  };
 
-    <View style={styles.row}>
-      <Text style={styles.label1}>Descrizione:</Text>
-      <Text>{evento.descrizione}</Text>
-    </View>
+  const toggleNotifications = () => {
+    setNotificationsEnabled(previousState => !previousState);
+  };
 
-    <View style={styles.row}>
-      <Text style={styles.label1}>Notifiche:</Text>
-      <Text>{evento.notificationsEnabled ? 'Abilitate' : 'Disabilitate'}</Text>
-    </View>
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Text style={styles.label1}>Titolo:</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          editable={editable}
+          placeholder="Inserisci titolo"
+          style={styles.textInput}
+        />
+      </View>
 
-    <TouchableOpacity
-      style={styles.addButton1}
-      onPress={() => navigation.navigate('ModificaEvento', { evento })}
-    >
-      <Text>Modifica</Text>
-    </TouchableOpacity>
-  </View>
-);
+      <View style={styles.row}>
+        <Text style={styles.label1}>Data:</Text>
+        <TextInput
+          value={date}
+          onChangeText={setDate}
+          editable={editable}
+          placeholder="gg/mm/aaaa"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Orario:</Text>
+        <TextInput
+          value={time}
+          onChangeText={setTime}
+          editable={editable}
+          placeholder="Inserisci orario"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Luogo:</Text>
+        <TextInput
+          value={location}
+          onChangeText={setLocation}
+          editable={editable}
+          placeholder="Inserisci luogo"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Descrizione:</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          editable={editable}
+          placeholder="Inserisci descrizione"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Notifiche:</Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#6200ea" }}
+          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+          onValueChange={toggleNotifications}
+          value={notificationsEnabled}
+          disabled={!editable} // Disabilita lo switch se non è in modalità di modifica
+        />
+      </View>
+
+      {editable ? (
+        <TouchableOpacity style={styles.addButton1} onPress={handleSavePress}>
+          <Text style={styles.buttonText}>Salva</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.addButton1} onPress={handleEditPress}>
+          <Text style={styles.buttonText}>Modifica</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 };
 
 
