@@ -227,6 +227,10 @@ const DettagliEvento = ({ route }) => {
     setEditable(false);
   };
 
+  const toggleNotifications = () => {
+    setNotificationsEnabled(previousState => !previousState);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -246,7 +250,7 @@ const DettagliEvento = ({ route }) => {
           value={date}
           onChangeText={setDate}
           editable={editable}
-          placeholder="Inserisci data"
+          placeholder="gg/mm/aaaa"
           style={styles.textInput}
         />
       </View>
@@ -287,9 +291,11 @@ const DettagliEvento = ({ route }) => {
       <View style={styles.row}>
         <Text style={styles.label1}>Notifiche:</Text>
         <Switch
+          trackColor={{ false: "#767577", true: "#6200ea" }}
+          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+          onValueChange={toggleNotifications}
           value={notificationsEnabled}
-          onValueChange={setNotificationsEnabled}
-          disabled={!editable}
+          disabled={!editable} // Disabilita lo switch se non è in modalità di modifica
         />
       </View>
 
