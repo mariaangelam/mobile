@@ -37,6 +37,7 @@ const GestisciEvento = () => {
   const [persone, setPersone] = useState([]);
   const [nomePersona, setNomePersona] = useState('');
 const idUnivoco = Date.now();
+const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
 
   const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
 
@@ -98,7 +99,7 @@ const idUnivoco = Date.now();
 
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { id: idUnivoco, titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone };
+    const nuovoEvento = { id: idUnivoco, titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone, expectedPeopleCount };
 
     addEvent(nuovoEvento);
 
@@ -177,6 +178,15 @@ const idUnivoco = Date.now();
           numberOfLines={4}
         />
         {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+                <Text style={styles.label}>Persone attese:</Text>
+        <TextInput
+          style={styles.input}
+          value={expectedPeopleCount}
+          onChangeText={setExpectedPeopleCount}
+          placeholder="Inserisci il numero di persone attese"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+        />
 
     <View style={styles.notificationContainer}>
           <Text>Notifica:</Text>
@@ -371,6 +381,7 @@ const AggiungiEvento = ({ navigation }) => {
   const [isDataValid, setIsDataValid] = useState(true);
   const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
   const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+  const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const idUnivoco = Date.now();
   
@@ -414,7 +425,7 @@ const AggiungiEvento = ({ navigation }) => {
     // Crea la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { id:idUnivoco,titolo, data: nuovaData, descrizione, notificationsEnabled };
+    const nuovoEvento = { id:idUnivoco,titolo, data: nuovaData, descrizione, notificationsEnabled, expectedPeopleCount  };
 
     addEvent(nuovoEvento);
     navigation.goBack();
@@ -462,6 +473,15 @@ const AggiungiEvento = ({ navigation }) => {
         numberOfLines={4}
       />
       {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+        <Text style={styles.label}>Persone attese:</Text>
+        <TextInput
+          style={styles.input}
+          value={expectedPeopleCount}
+          onChangeText={setExpectedPeopleCount}
+          placeholder="Inserisci il numero di persone attese"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+        />
 
       <View style={styles.notificationContainer}>
         <Text>Notifica:</Text>
@@ -473,6 +493,7 @@ const AggiungiEvento = ({ navigation }) => {
           value={notificationsEnabled}
         />
       </View>
+            
 
       <View style={styles.addButtonContainer}>
         <TouchableOpacity
@@ -845,6 +866,19 @@ const styles = StyleSheet.create({
     padding: 20,
 
   },
+  row: {
+    padding: 8, 
+  }, 
+  label1: {
+    fontSize: 16,
+  }, 
+  textInput:{
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#6200ea',
+    borderRadius: 4,
+    padding: 5,
+  }, 
 
   label: {
     fontSize: 16,
