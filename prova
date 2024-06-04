@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 
 
+
 const EventsContext = createContext();
 const PeopleContext = createContext();
 
@@ -35,6 +36,7 @@ const GestisciEvento = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [persone, setPersone] = useState([]);
   const [nomePersona, setNomePersona] = useState('');
+const idUnivoco = Date.now();
 
   const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
 
@@ -66,6 +68,7 @@ const GestisciEvento = () => {
   };
 
   const handleAggiungiEvento = () => {
+   
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
@@ -95,7 +98,7 @@ const GestisciEvento = () => {
 
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone };
+    const nuovoEvento = { id: idUnivoco, titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone };
 
     addEvent(nuovoEvento);
 
@@ -196,37 +199,35 @@ const GestisciEvento = () => {
     </View>
   );
 };
+
 const DettagliEvento = ({ route }) => {
-  const { evento } = route.params;
-  const [editable, setEditable] = useState(false);
+  const { evento: originalEvent } = route.params;
+const evento = {...originalEvent }; // crea una copia dell'oggetto evento
   const { updateEvent } = useContext(EventsContext);
+
+  // Definizione degli stati per i dettagli dell'evento
+  const [editable, setEditable] = useState(false);
   const [title, setTitle] = useState(evento.titolo);
   const [date, setDate] = useState(evento.data.toLocaleDateString('it-IT'));
   const [time, setTime] = useState(evento.orario);
   const [location, setLocation] = useState(evento.luogo);
   const [description, setDescription] = useState(evento.descrizione);
   const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
+  
 
+  // Funzione per abilitare la modalità di modifica
   const handleEditPress = () => {
     setEditable(true);
   };
 
-  const handleSavePress = () => {
-    const [day, month, year] = date.split('/');
-    const updatedEvent = {
-      ...evento,
-      titolo: title,
-      data: new Date(year, month - 1, day), // Convert the date string to Date object
-      orario: time,
-      luogo: location,
-      descrizione: description,
-      notificationsEnabled
-    };
 
-    updateEvent(updatedEvent);
-    setEditable(false);
-  };
-
+const handleSavePress = () => {
+  const [day, month, year] = date.split('/');
+  const updatedEvent = {...evento, titolo: title, data: new Date(year, month - 1, day)};
+  updateEvent(updatedEvent);
+  setEditable(false); // Disabilita la modalità di modifica
+};
+  // Funzione per abilitare/disabilitare le notifiche
   const toggleNotifications = () => {
     setNotificationsEnabled(previousState => !previousState);
   };
@@ -371,6 +372,7 @@ const AggiungiEvento = ({ navigation }) => {
   const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
   const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const idUnivoco = Date.now();
   
   const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
 
@@ -412,7 +414,7 @@ const AggiungiEvento = ({ navigation }) => {
     // Crea la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { titolo, data: nuovaData, descrizione, notificationsEnabled };
+    const nuovoEvento = { id:idUnivoco,titolo, data: nuovaData, descrizione, notificationsEnabled };
 
     addEvent(nuovoEvento);
     navigation.goBack();
@@ -791,6 +793,7 @@ const App = () => {
     setEvents([...events, newEvent]);
   };
     const addPerson = (newPeople) => {
+  
     setPeople([...people, newPeople]);
   };
 
@@ -804,7 +807,7 @@ const App = () => {
  
 
   return (
-    <EventsContext.Provider value={{ events, addEvent, setEvents, updateEvent }}>
+    <EventsContext.Provider value={{ events, addEvent, updateEvent }}>
     <PeopleContext.Provider value={{ people, addPerson }}>
       <NavigationContainer>
         <Stack.Navigator>
