@@ -1,27 +1,27 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Alert } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 import { useNavigation } from '@react-navigation/native';
+import { LineChart } from 'react-native-gifted-charts';
+
 
 const EventsContext = createContext();
 const PeopleContext = createContext();
 
 
 
-const Statistiche = () => (
-  <View>
-    <Text>Schermata Statistiche</Text>
-  </View>
-);
+const Statistiche = () => {
+  
+};
 
 const GestisciEvento = () => {
-const { addEvent } = useContext(EventsContext);
+  const { addEvent } = useContext(EventsContext);
   const [titolo, setTitolo] = useState('');
   const [dataSelezionata, setDataSelezionata] = useState('');
   const [descrizione, setDescrizione] = useState('');
@@ -33,8 +33,17 @@ const { addEvent } = useContext(EventsContext);
   const [isLuogoEmpty, setIsLuogoEmpty] = useState(false);
   const [isOrarioEmpty, setIsOrarioEmpty] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  
+  const [persone, setPersone] = useState([]);
+  const [nomePersona, setNomePersona] = useState('');
+
   const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
+
+  const handleAggiungiPersona = () => {
+    if (!isFieldEmpty(nomePersona)) {
+      setPersone([...persone, nomePersona]);
+      setNomePersona('');
+    }
+  };
 
   const isValidDate = (day, month, year) => {
     const data = new Date(year, month - 1, day);
@@ -49,134 +58,170 @@ const { addEvent } = useContext(EventsContext);
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiEvento = () => { 
-    // Converte la data in una stringa
+  const formatOrario = (text) => {
+    if (text.length === 2 && text.length > orario.length) {
+      return text + ':';
+    }
+    return text;
+  };
+
+  const handleAggiungiEvento = () => {
     const dataFormattata = dataSelezionata.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
     const anno = parseInt(dataFormattata[2], 10);
 
-    // controllo la validità della data
     if (!isValidDate(giorno, mese, anno)) {
       setIsDataValid(false);
       return;
     }
 
-    // Check if fields are empty
+    const orarioRegexp = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!orarioRegexp.test(orario)) {
+      setIsOrarioEmpty(true);
+      return;
+    }
+
     setIsTitoloEmpty(isFieldEmpty(titolo));
     setIsDescrizioneEmpty(isFieldEmpty(descrizione));
     setIsLuogoEmpty(isFieldEmpty(luogo));
     setIsOrarioEmpty(isFieldEmpty(orario));
+
     if (isFieldEmpty(titolo) || isFieldEmpty(descrizione) || isFieldEmpty(luogo) || isFieldEmpty(orario)) {
       return;
     }
 
     setIsDataValid(true);
 
-    // Crea la nuova data
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovoEvento = { titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled };
+    const nuovoEvento = { titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone };
 
     addEvent(nuovoEvento);
- 
+
+    Alert.alert("Perfetto", "Evento inserito correttamente");
+
+    setTitolo('');
+    setDataSelezionata('');
+    setDescrizione('');
+    setLuogo('');
+    setOrario('');
+    setPersone([]);
+    setNotificationsEnabled(false);
   };
 
   return (
     <View style={styles.container}>
-    <ScrollView>
-      <Text style={styles.label}>Titolo:</Text>
-      <TextInput
-        style={[styles.input, isTitoloEmpty && styles.invalidInput]}
-        value={titolo}
-        onChangeText={setTitolo}
-        placeholder="Inserisci il titolo"
-        placeholderTextColor="#888"
-      />
-      {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
-
-      <Text style={styles.label}>Data:</Text>
-      <TextInput
-        style={[styles.input, !isDataValid && styles.invalidInput]}
-        placeholder="Inserisci la data (DD/MM/YYYY)"
-         placeholderTextColor="#888"
-        value={dataSelezionata}
-        maxLength={10}
-        keyboardType="numeric"
-        onChangeText={(text) => {
-          if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
-            setDataSelezionata(text + '/');
-          } else {
-            setDataSelezionata(text);
-          }
-        }}
-      />
-      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
-
-      <Text style={styles.label}>Orario:</Text>
-      <TextInput
-        style={[styles.input, isOrarioEmpty && styles.invalidInput]}
-        value={orario}
-        onChangeText={setOrario}
-        placeholder="Inserisci l'orario (HH:MM)"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-      />
-      {isOrarioEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
-
-      <Text style={styles.label}>Luogo:</Text>
-      <TextInput
-        style={[styles.input, isLuogoEmpty && styles.invalidInput]}
-        value={luogo}
-        onChangeText={setLuogo}
-        placeholder="Inserisci il luogo"
-        placeholderTextColor="#888"
-      />
-      {isLuogoEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
-
-      <Text style={styles.label}>Descrizione:</Text>
-      <TextInput
-        style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
-        value={descrizione}
-        onChangeText={setDescrizione}
-        placeholder="Inserisci la descrizione"
-        placeholderTextColor="#888"
-        multiline={true}
-        numberOfLines={4}
-      />
-      {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
-
-      <View style={styles.notificationContainer}>
-        <Text>Notifica:</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#6200ea" }}
-          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
-          onValueChange={toggleNotifications}
-          value={notificationsEnabled}
+      <ScrollView>
+        <Text style={styles.label}>Titolo:</Text>
+        <TextInput
+          style={[styles.input, isTitoloEmpty && styles.invalidInput]}
+          value={titolo}
+          onChangeText={setTitolo}
+          placeholder="Inserisci il titolo"
+          placeholderTextColor="#888"
         />
-      </View>
+        {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
 
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity
-          onPress={handleAggiungiEvento}
-          style={styles.addButton1}
-        >
-          <Text style={styles.buttonText}>Aggiungi Evento</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.label}>Data:</Text>
+        <TextInput
+          style={[styles.input, !isDataValid && styles.invalidInput]}
+          placeholder="Inserisci la data (DD/MM/YYYY)"
+          placeholderTextColor="#888"
+          value={dataSelezionata}
+          maxLength={10}
+          keyboardType="numeric"
+          onChangeText={(text) => {
+            if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+              setDataSelezionata(text + '/');
+            } else {
+              setDataSelezionata(text);
+            }
+          }}
+        />
+        {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+        <Text style={styles.label}>Orario:</Text>
+        <TextInput
+          style={[styles.input, isOrarioEmpty && styles.invalidInput]}
+          value={orario}
+          onChangeText={(text) => setOrario(formatOrario(text))}
+          placeholder="Inserisci l'orario (HH:MM)"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          maxLength={5}
+        />
+        {isOrarioEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+        <Text style={styles.label}>Luogo:</Text>
+        <TextInput
+          style={[styles.input, isLuogoEmpty && styles.invalidInput]}
+          value={luogo}
+          onChangeText={setLuogo}
+          placeholder="Inserisci il luogo"
+          placeholderTextColor="#888"
+        />
+        {isLuogoEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+        <Text style={styles.label}>Descrizione:</Text>
+        <TextInput
+          style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
+          value={descrizione}
+          onChangeText={setDescrizione}
+          placeholder="Inserisci la descrizione"
+          placeholderTextColor="#888"
+          multiline={true}
+          numberOfLines={4}
+        />
+        {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+    
+
+
+          <Text style={styles.label}>Persone:</Text>
+            <View style={styles.personInputContainer}>
+          <TextInput
+            style={[styles.input, styles.personInput]}
+            value={nomePersona}
+            onChangeText={setNomePersona}
+            placeholder="Inserisci il nome"
+            placeholderTextColor="#888"
+          />
+          <TouchableOpacity
+            onPress={handleAggiungiPersona}
+            style={[styles.addButton1, styles.addPersonButton]}
+          >
+            <Text style={styles.buttonText}>Aggiungi</Text>
+          </TouchableOpacity>
+        </View>
+    <View style={styles.notificationContainer}>
+          <Text>Notifica:</Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#6200ea" }}
+            thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+            onValueChange={toggleNotifications}
+            value={notificationsEnabled}
+          />
+        </View>
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity
+            onPress={handleAggiungiEvento}
+            style={styles.addButton1}
+          >
+            <Text style={styles.buttonText}>Aggiungi Evento</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
 };
-
-
 const DettagliEvento = ({ route }) => {
   const { evento } = route.params;
    
 
  return (
   <View style={styles.container}>
-    <View style={styles.row}>
+    <View style={styles.eventTitle}>
       <Text style={styles.label1}>Titolo:</Text>
       <Text>{evento.titolo}</Text>
     </View>
@@ -670,7 +715,7 @@ const AggiungiPersona = ({ navigation }) => {
       />
       {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
 
-      <View style={styles.addButtonContainer}>
+      <View style={styles.addButtonContainer1}>
         <TouchableOpacity
           onPress={handleAggiungiPersona}
           style={styles.addButton1}
@@ -873,7 +918,27 @@ dettagli: {
 
 
 },
+   addButtonContainer1: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+   personInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  
+  },
+ personInput: {
+    flex: 1,
+    height:40,
+  },
+    addPersonButton: {
+    marginLeft:10,
+    marginBottom:10,
+    paddingBottom:10,
+      
 
+
+  },
 });
 
 export default App;
