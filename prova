@@ -1,4 +1,4 @@
-import React, {useEffect, useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -8,7 +8,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, 
 import { SearchBar } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 import { useNavigation } from '@react-navigation/native';
-import { BarChart } from 'react-native-gifted-charts';
+import { LineChart } from 'react-native-gifted-charts';
 
 
 const EventsContext = createContext();
@@ -17,48 +17,8 @@ const PeopleContext = createContext();
 
 
 const Statistiche = () => {
-   const { events } = useContext(EventsContext);
-  const [monthlyEventCounts, setMonthlyEventCounts] = useState([]);
-
-  useEffect(() => {
-    // Funzione per contare il numero di eventi per ogni mese
-    const countEventsByMonth = () => {
-      const counts = Array(12).fill(0);
-
-      events.forEach(event => {
-        const month = new Date(event.data).getMonth();
-        counts[month]++;
-      });
-
-      return counts;
-    };
-
-    // Ottieni il conteggio degli eventi per ogni mese
-    const eventCounts = countEventsByMonth();
-    setMonthlyEventCounts(eventCounts);
-  }, [events]);
-
-  const barData = monthlyEventCounts.map((count, index) => ({ value: count, label: indexToMonth(index) }));
-
-  return (
-    <View>
-      <BarChart
-        data={barData}
-        barWidth={35}
-      />
-    </View>
-  );
+  
 };
-
-const indexToMonth = (index) => {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  return months[index];
-};
-
-
 
 const GestisciEvento = () => {
   const { addEvent } = useContext(EventsContext);
@@ -248,37 +208,35 @@ const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
     </View>
   );
 };
-
 const DettagliEvento = ({ route }) => {
-  const { evento: originalEvent } = route.params;
-const evento = {...originalEvent }; // crea una copia dell'oggetto evento
-  const { updateEvent } = useContext(EventsContext);
-
-  // Definizione degli stati per i dettagli dell'evento
+  const { evento } = route.params;
   const [editable, setEditable] = useState(false);
+  const { updateEvent } = useContext(EventsContext);
   const [title, setTitle] = useState(evento.titolo);
   const [date, setDate] = useState(evento.data.toLocaleDateString('it-IT'));
   const [time, setTime] = useState(evento.orario);
   const [location, setLocation] = useState(evento.luogo);
   const [description, setDescription] = useState(evento.descrizione);
   const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
-  
 
-  // Funzione per abilitare la modalità di modifica
   const handleEditPress = () => {
     setEditable(true);
   };
 
+  const handleSavePress = () => {
+    const [day, month, year] = date.split('/');
+    const updatedEvent = {
+      ...evento,
+      titolo: title,
+      data: new Date(year, month - 1, day), // Convert the date string to Date object
+      orario: time,
+      luogo: location,
+      descrizione: description,
+      notificationsEnabled
+    };
 
-const handleSavePress = () => {
-  const [day, month, year] = date.split('/');
-  const updatedEvent = {...evento, titolo: title, data: new Date(year, month - 1, day)};
-  updateEvent(updatedEvent);
-  setEditable(false); // Disabilita la modalità di modifica
-};
-  // Funzione per abilitare/disabilitare le notifiche
-  const toggleNotifications = () => {
-    setNotificationsEnabled(previousState => !previousState);
+    updateEvent(updatedEvent);
+    setEditable(false);
   };
 
   return (
@@ -300,7 +258,7 @@ const handleSavePress = () => {
           value={date}
           onChangeText={setDate}
           editable={editable}
-          placeholder="gg/mm/aaaa"
+          placeholder="Inserisci data"
           style={styles.textInput}
         />
       </View>
@@ -341,11 +299,9 @@ const handleSavePress = () => {
       <View style={styles.row}>
         <Text style={styles.label1}>Notifiche:</Text>
         <Switch
-          trackColor={{ false: "#767577", true: "#6200ea" }}
-          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
-          onValueChange={toggleNotifications}
           value={notificationsEnabled}
-          disabled={!editable} // Disabilita lo switch se non è in modalità di modifica
+          onValueChange={setNotificationsEnabled}
+          disabled={!editable}
         />
       </View>
 
@@ -366,15 +322,21 @@ const handleSavePress = () => {
 
 
  const Eventi = () => {
- const { events } = useContext(EventsContext);
+ const { events, setEvents } = useContext(EventsContext);
+ 
  const [search, setSearch] = useState('');
-const navigation = useNavigation();
+ const navigation = useNavigation();
 
   // Funzione per filtrare gli eventi in base al testo della searchbar
   const filteredEvents = events.filter(event =>
     event.titolo.toLowerCase().includes(search.toLowerCase())
   );
- 
+
+const deleteEvent = (id) => {
+  const updatedEvents = events.filter(event => event.id !== id);
+  setEvents(updatedEvents);
+  };
+  
 
   const renderEvento = ({ item }) => (
        <View style={styles.eventContainer}>
@@ -387,6 +349,12 @@ const navigation = useNavigation();
       >
         <Text>Dettagli</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.elimina}
+        onPress={() => deleteEvent(item.id)}
+      >
+        <Text>Elimina</Text>
+        </TouchableOpacity>
     </View>
   );
 
@@ -609,6 +577,8 @@ const { people } = useContext(PeopleContext);
 
 
 
+
+
 const Notifiche = () => {
   const { events } = useContext(EventsContext);
   // Ottieni la data odierna
@@ -764,7 +734,7 @@ const AggiungiPersona = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiPersona = () => { 
+  const handleAggiungiPersona = async () => { 
     const dataFormattata = dataNascita.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
@@ -854,19 +824,8 @@ const App = () => {
   const addEvent = (newEvent) => {
     setEvents([...events, newEvent]);
   };
-     // Funzione per aggiungere una nuova persona
-  const addPerson = (newPerson) => {
-    // Aggiungi la nuova persona alla lista delle persone
-    setPeople([...people, newPerson]);
-
-    // Incrementa il numero di iscritti per l'evento corrispondente
-    setEvents(prevEvents =>
-      prevEvents.map(event =>
-        event.id === newPerson.eventId
-          ? { ...event, iscritti: event.iscritti + 1 } // Incrementa il numero di iscritti
-          : event
-      )
-    );
+    const addPerson = (newPeople) => {
+    setPeople([...people, newPeople]);
   };
 
 
@@ -876,10 +835,11 @@ const App = () => {
     );
   };
 
+  
  
 
   return (
-    <EventsContext.Provider value={{ events, addEvent, updateEvent }}>
+    <EventsContext.Provider value={{ events, addEvent, setEvents, updateEvent }}>
     <PeopleContext.Provider value={{ people, addPerson }}>
       <NavigationContainer>
         <Stack.Navigator>
@@ -930,6 +890,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 5,
   }, 
+  elimina:{
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 3,
+    margin: 2, 
+    backgroundColor: '#FF0000',
+    borderRadius: 4,
+  },
 
   label: {
     fontSize: 16,
