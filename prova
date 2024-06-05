@@ -8,7 +8,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, 
 import { SearchBar, Icon  } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 import { useNavigation } from '@react-navigation/native';
-import { BarChart } from 'react-native-gifted-charts';
+import { BarChart, PieChart } from 'react-native-gifted-charts';
 
 
 
@@ -19,12 +19,11 @@ const PeopleContext = createContext();
 
 const Statistiche = () => {
   const { events } = useContext(EventsContext);
-  const { people } = useContext(PeopleContext);
 
   if (!events || events.length === 0) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Nessun evento disponibile.</Text>
+      <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Nessun evento disponibile.</Text>
       </View>
     );
   }
@@ -33,31 +32,36 @@ const Statistiche = () => {
   const totalExpectedPeople = events.reduce((accumulator, event) => accumulator + parseFloat(event.expectedPeopleCount), 0);
   const media = totalExpectedPeople / events.length;
 
-  // Prepara i dati per il grafico
-  const eventData = events.map((event, index) => ({
+  // Prepara i dati per il grafico a barre
+  const barChartData = events.map((event) => ({
     label: event.titolo,
     value: parseFloat(event.expectedPeopleCount),
   }));
 
+  // Prepara i dati per il grafico a torta
+  const pieChartData = events.map((event) => ({
+    name: event.titolo,
+    population: parseFloat(event.expectedPeopleCount),
+    color: `#${Math.floor(Math.random() * 16777215).toString(16)}`, // Genera un colore casuale per ogni fetta
+    legendFontColor: '#7F7F7F',
+    legendFontSize: 15,
+  }));
+
   return (
-    <View>
-      <ScrollView>
-       <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
-        Persone Attese: {media.toFixed(2)}</Text>
-        <BarChart
-          data={eventData}
-          barWidth={35}
-          chartConfig={{
-          
-            color: '#9664C8',
-labelColor: '#9664C8',
-          }}
-          
-        />
-      </ScrollView>
-    </View>
+    <ScrollView contentContainerStyle={{ alignItems: 'center' }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
+        Persone Attese: {media.toFixed(2)}
+      </Text>
+      <View style={{ marginBottom: 20 }}>
+        <BarChart data={barChartData} width={300} height={200} />
+      </View>
+      <View style={{ marginBottom: 20 }}>
+        <PieChart data={pieChartData} width={300} height={200} />
+      </View>
+    </ScrollView>
   );
 };
+
 
 
 
