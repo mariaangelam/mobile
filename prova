@@ -21,6 +21,10 @@ const Statistiche = () => {
   
 };
 
+
+
+
+
 const GestisciEvento = () => {
   const { addEvent } = useContext(EventsContext);
   const [titolo, setTitolo] = useState('');
@@ -566,7 +570,10 @@ const { people } = useContext(PeopleContext);
     <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
           <Text>Persone Attese: {item.expectedPeopleCount}</Text>
       <Text>Iscritti: {item.iscritti}</Text>
-    <TouchableOpacity onPress={() => navigation.navigate('AggiungiPersona')} style={[styles.plus, styles.descriptionSpacer]}>
+    <TouchableOpacity 
+  onPress={() => navigation.navigate('AggiungiPersona', { idUnivoco: item.idUnivoco })} 
+  style={[styles.plus, styles.descriptionSpacer]}
+>
       <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
     </TouchableOpacity>
   </View>
@@ -752,7 +759,8 @@ const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
   );
 };
 
-const AggiungiPersona = ({ navigation }) => {
+const AggiungiPersona = ({ navigation, route }) => {
+  const { idUnivoco } = route.params;
   const { addPerson } = useContext(PeopleContext);
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
@@ -774,7 +782,7 @@ const AggiungiPersona = ({ navigation }) => {
     return fieldValue.trim() === '';
   };
 
-  const handleAggiungiPersona = async () => { 
+  const handleAggiungiPersona = () => { 
     const dataFormattata = dataNascita.split('/');
     const giorno = parseInt(dataFormattata[0], 10);
     const mese = parseInt(dataFormattata[1], 10);
@@ -795,7 +803,7 @@ const AggiungiPersona = ({ navigation }) => {
 
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovaPersona = { nome, cognome, dataNascita: nuovaData };
+    const nuovaPersona = { idUnivoco, nome, cognome, dataNascita: nuovaData };
  
     addPerson(nuovaPersona);
     navigation.goBack();
@@ -864,8 +872,20 @@ const App = () => {
   const addEvent = (newEvent) => {
     setEvents([...events, newEvent]);
   };
-    const addPerson = (newPeople) => {
-    setPeople([...people, newPeople]);
+   const addPerson = (newPerson) => {
+    setPeople([...people, newPerson]);
+
+    // Aggiorna il numero di iscritti dell'evento corrispondente
+    const updatedEvents = events.map(event => {
+      if (event.idUnivoco === newPerson.idUnivoco) {
+        return {
+          ...event,
+          iscritti: event.iscritti + 1,
+        };
+      }
+      return event;
+    });
+    setEvents(updatedEvents);
   };
 
 
