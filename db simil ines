@@ -1,0 +1,1312 @@
+//import per la gestione dello stato e del contesto 
+import React, {useEffect, useState, createContext, useContext } from 'react';
+
+//per la barra di navigazione inferiore 
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
+//per la barra di navigazione superiore 
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+
+//per la navigazione a stack 
+import { createStackNavigator } from '@react-navigation/stack';
+
+//per la barra di navigazione 
+import { NavigationContainer } from '@react-navigation/native';
+
+//per le icone
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Alert, Modal } from 'react-native';
+import { SearchBar, Icon  } from 'react-native-elements';
+
+//per il database locale
+import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
+
+
+//per la navigazione tra le schermate
+import { useNavigation } from '@react-navigation/native';
+
+//per i grafici
+import { BarChart, PieChart } from 'react-native-gifted-charts';
+
+
+//per la condivisione dei dati relativi agli eventi all'interno dell'applicazione
+const EventsContext = createContext();
+
+//per la condivisione dei dati relativi agli utenti all'interno dell'applicazione
+const PeopleContext = createContext();
+
+//Barra navigazione superiore 
+const TopTab = createMaterialTopTabNavigator();
+
+//schermata DASHBOARD
+const Dashboard = ({ navigation }) => {
+  const { events } = useContext(EventsContext);
+const { people } = useContext(PeopleContext);
+//layout singolo evento con bottone per aggiunta persona 
+ const renderEvento = ({ item }) => (
+  <View style={styles.eventContainer}>
+    <Text style={styles.eventTitle}>{item.titolo}</Text>
+    <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+    <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+          <Text>Persone Attese: {item.expectedPeopleCount}</Text>
+      <Text>Iscritti: {item.iscritti}</Text>
+    <TouchableOpacity 
+  onPress={() => navigation.navigate('AggiungiPersona', { id: item.id })} 
+  style={[styles.plus, styles.descriptionSpacer]}
+>
+      <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
+    </TouchableOpacity>
+  </View>
+);
+
+//layout eventi passati, futuri 
+  return (
+    <View style={{ flex: 1 }}>
+      <TopTab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: '#fff',
+          tabBarInactiveTintColor: '#ccc',
+          tabBarStyle: { backgroundColor: '#6200ea' },
+          tabBarIndicatorStyle: { backgroundColor: '#fff' },
+        }}
+      >
+        <TopTab.Screen name="Eventi Passati" component={() => (
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
+            <FlatList
+              data={events.filter(event => event.data < new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+        <TopTab.Screen name="Eventi Futuri" component={() => (
+          <View style={[styles.tabContainer, styles.eventsMargin]}>
+            <FlatList
+              data={events.filter(event => event.data >= new Date())}
+              renderItem={renderEvento}
+              keyExtractor={(item, index) => index.toString()}
+            />
+          </View>
+        )} />
+      </TopTab.Navigator>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AggiungiEvento')}
+      >
+        <MaterialCommunityIcons name="plus" color="#fff" size={24} />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+//bottone + in dashboard
+const AggiungiEvento = ({ navigation }) => {
+  const { addEvent } = useContext(EventsContext);
+  //useState per l'aggiunta e controllo dell'evento 
+  const [titolo, setTitolo] = useState('');
+  const [dataSelezionata, setDataSelezionata] = useState('');
+  const [descrizione, setDescrizione] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
+  const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+  const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const idUnivoco = Date.now();
+  
+  //se le notifiche sono abilitiate vengono disabilitate e viceversa
+  const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
+
+  //funzione controllo data
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+  //funzione controllo campo vuoto
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+  const handleAggiungiEvento = () => { 
+    // Converte la data in una stringa
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+    // controllo la validità della data
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+
+    // Controllo se i campi sono vuoti 
+    setIsTitoloEmpty(isFieldEmpty(titolo));
+    setIsDescrizioneEmpty(isFieldEmpty(descrizione));
+    if (isFieldEmpty(titolo) || isFieldEmpty(descrizione)) {
+      return;
+    }
+
+    setIsDataValid(true);
+
+    // Crea la nuova data
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+    const nuovoEvento = { id:idUnivoco,titolo, data: nuovaData, descrizione, notificationsEnabled, expectedPeopleCount, iscritti: 0};
+
+    addEvent(nuovoEvento); //viene aggiunto l'evento
+    navigation.goBack();
+  };
+
+  //layout evento in aggiunta e verifica dei campi 
+  return (
+    <View style={styles.container}>
+    <ScrollView>
+      <Text style={styles.label}>Titolo:</Text>
+      <TextInput
+        style={[styles.input, isTitoloEmpty && styles.invalidInput]}
+        value={titolo}
+        onChangeText={setTitolo}
+        placeholder="Inserisci il titolo"
+        placeholderTextColor="#888"
+      />
+      {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+      
+      <Text style={styles.label}>Data:</Text>
+      <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+        value={dataSelezionata}
+        placeholderTextColor="#888"
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+            setDataSelezionata(text + '/');
+          } else {
+            setDataSelezionata(text);
+          }
+        }}
+      />
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+      <Text style={styles.label}>Descrizione:</Text>
+      <TextInput
+        style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
+        value={descrizione}
+        onChangeText={setDescrizione}
+        placeholder="Inserisci la descrizione"
+        placeholderTextColor="#888"
+        multiline={true}
+        numberOfLines={4}
+      />
+      {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+        <Text style={styles.label}>Persone attese:</Text>
+        <TextInput
+          style={styles.input}
+          value={expectedPeopleCount}
+          onChangeText={setExpectedPeopleCount}
+          placeholder="Inserisci il numero di persone attese"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+        />
+
+      <View style={styles.notificationContainer}>
+        <Text>Notifica:</Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#6200ea" }}
+          thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+
+          onValueChange={toggleNotifications}
+          value={notificationsEnabled}
+        />
+      </View>
+          
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAggiungiEvento}
+          style={styles.addButton1}
+        >
+          <Text style={styles.buttonText}>Aggiungi Evento</Text>
+        </TouchableOpacity>
+      </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+//aggiungi persona su singolo evento
+const AggiungiPersona = ({ navigation }) => {
+ const { events } = useContext(EventsContext);
+ const [selectedEventId, setSelectedEventId] = useState(events.length > 0 ? events[0].id : null);
+  const { addPerson } = useContext(PeopleContext);
+  //useState per l'aggiunta e controllo della persona
+  const [nome, setNome] = useState('');
+  const [cognome, setCognome] = useState('');
+  const [dataNascita, setDataNascita] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isNomeEmpty, setIsNomeEmpty] = useState(false);
+  const [isCognomeEmpty, setIsCognomeEmpty] = useState(false);
+
+//funzione controllo data
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+//funzione controllo campo vuoto
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+//parsing data di nascita 
+  const handleAggiungiPersona = () => { 
+    const dataFormattata = dataNascita.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+//controllo data 
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+
+//controllo campi vuoti
+    setIsNomeEmpty(isFieldEmpty(nome));
+    setIsCognomeEmpty(isFieldEmpty(cognome));
+    if (isFieldEmpty(nome) || isFieldEmpty(cognome)) {
+      return;
+    }
+
+    setIsDataValid(true);
+
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+    const nuovaPersona = { eventId: selectedEventId , nome, cognome, dataNascita: nuovaData };
+ 
+    addPerson(nuovaPersona); //aggiunta persona all'evento
+    navigation.goBack();
+  };
+
+//layout aggiungi persona 
+  return (
+    <View style={styles.container}>
+    <ScrollView>
+      <Text style={styles.label}>Nome:</Text>
+      <TextInput
+        style={[styles.input, isNomeEmpty && styles.invalidInput]}
+        value={nome}
+        onChangeText={setNome}
+        placeholder="Inserisci il nome"
+        placeholderTextColor="#888"
+      />
+      {isNomeEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Cognome:</Text>
+      <TextInput
+        style={[styles.input, isCognomeEmpty && styles.invalidInput]}
+        value={cognome}
+        onChangeText={setCognome}
+        placeholder="Inserisci il cognome"
+        placeholderTextColor="#888"
+      />
+      {isCognomeEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+      <Text style={styles.label}>Data di nascita:</Text>
+      <TextInput
+        style={[styles.input, !isDataValid && styles.invalidInput]}
+        placeholder="Inserisci la data (DD/MM/YYYY)"
+        value={dataNascita}
+        maxLength={10}
+        keyboardType="numeric"
+        onChangeText={(text) => {
+          if ((text.length === 2 || text.length === 5) && text.length > dataNascita.length) {
+            setDataNascita(text + '/');
+          } else {
+            setDataNascita(text);
+          }
+        }}
+      />
+      {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+      <View style={styles.addButtonContainer1}>
+        <TouchableOpacity
+          onPress={handleAggiungiPersona}
+          style={styles.addButton1}
+        >
+          <Text style={styles.addButton1}>Aggiungi Persona</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+    </View>
+  );
+};
+
+//barra navigazione inferiore
+const BottomTab = createBottomTabNavigator();
+
+const TabNavigator = () => {
+const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
+
+  //numero notifica
+  //filtra un array di eventi per ottenere quelli che hanno le notifiche abilitate e che si verificano     domani, e poi conta quanti sono questi eventi.
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+     const isSameDay = (date1, date2) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
+  const filteredEvents = events.filter(event => event.notificationsEnabled && isSameDay(event.data, tomorrow));
+
+  const numFilteredEvents = filteredEvents.length; 
+
+//layout barra di navigazione inferiore   
+  return (
+  <BottomTab.Navigator
+    initialRouteName="Dashboard"
+    screenOptions={{
+      tabBarActiveTintColor: '#6200ea',
+      tabBarInactiveTintColor: 'gray',
+      tabBarStyle: { backgroundColor: '#ffff' },
+    }}
+  >
+    <BottomTab.Screen
+      name="Dashboard"
+      component={Dashboard}
+      options={{
+        tabBarLabel: 'Dashboard',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Eventi"
+      component={Eventi}
+      options={{
+        tabBarLabel: 'Eventi',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="calendar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Aggiungi Evento"
+      component={GestisciEvento}
+      options={{
+        tabBarLabel: 'Aggiungi',
+        tabBarIcon: ({ color, size, focused }) => (
+        <MaterialCommunityIcons
+              name={focused ? "plus-circle" : "plus"}
+              color={color}
+              size={size}
+            />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+      name="Statistiche"
+      component={Statistiche}
+      options={{
+        tabBarLabel: 'Statistiche',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+        ),
+      }}
+    />
+    <BottomTab.Screen
+  name="Notifiche"
+  component={Notifiche}
+  options={({ route }) => ({
+    tabBarLabel: 'Notifiche',
+    tabBarIcon: ({ color, size }) => (
+      <MaterialCommunityIcons name="bell" color={color} size={size} />
+    ),
+    tabBarBadge: numFilteredEvents > 0 ? numFilteredEvents : null,
+  })}
+/>
+  </BottomTab.Navigator>
+  );
+};
+//Fine barra navigazione inferiore 
+
+//creazione della navigazione tramite stack
+const Stack = createStackNavigator();
+
+const Main = () => {
+  return (
+    <SQLiteProvider
+      databaseName="StorageEvents.db"
+      assetSource={{ assetId: require('./assets/StorageEvents.db') }}
+    >
+      <App />
+    </SQLiteProvider>
+  );
+};
+
+const App = () => {
+  const db = useSQLiteContext();
+  const [events, setEvents] = useState([]);
+  const [people, setPeople] = useState([]);
+
+  const addEvent = async (newEvent) => {
+    try {
+      const result = await db.executeSql(
+        'INSERT INTO eventi (titolo, data, luogo, orario, descrizione, notifica, iscritti) VALUES (?, ?, ?, ?, ?, ?, ?);',
+        [newEvent.titolo, newEvent.data, newEvent.luogo, newEvent.orario, newEvent.descrizione, newEvent.notifica, newEvent.iscritti]
+      );
+      const insertedId = result.insertId;
+      setEvents([...events, { ...newEvent, id: insertedId }]);
+    } catch (error) {
+      console.error('Errore durante l\'aggiunta di un evento:', error);
+    }
+  };
+
+const addPerson = async (newPerson) => {
+    try {
+      const result = await db.executeSql(
+        'INSERT INTO people (nome, cognome, datanascita, idevento) VALUES (?, ?, ?, ?);',
+        [newPerson.nome, newPerson.cognome, newPersona.datanascita, newPerson.idevento]
+      );
+      const insertedId = result.insertId;
+      setPeople([...people, { ...newPerson, id: insertedId }]);
+
+      // Aggiorna il numero di iscritti dell'evento corrispondente
+      setEvents((prevEvents) => {
+        return prevEvents.map(event => {
+          if (event.id === newPerson.idevento) {
+            return {
+              ...event,
+              iscritti: event.iscritti + 1,
+            };
+          }
+          return event;
+        });
+      });
+    }catch(error){
+      console.error('Errore durante l\'aggiunta di una persona:', error);
+    }
+  };
+
+  const updateEvent = async (updatedEvent) => {
+    try {
+      await db.executeSql(
+        'UPDATE eventi SET titolo = ?, data = ?, luogo = ?, orario = ?, descrizione = ?, notifica = ?, iscritti = ? WHERE id = ?;',
+        [
+          updatedEvent.titolo,
+          updatedEvent.data,
+          updatedEvent.luogo,
+          updatedEvent.orario,
+          updatedEvent.descrizione,
+          updatedEvent.notifica,
+          updatedEvent.iscritti,
+          updatedEvent.id
+        ]
+      );
+
+    setEvents((prevEvents) =>
+      prevEvents.map((event) => (event.id === updatedEvent.id ? updatedEvent : event))
+    );
+  } catch (error) {
+    console.error('Errore durante l\'aggiornamento dell\'evento:', error);
+  }
+};
+
+//layout navigazione tramite stack
+  return (
+    <EventsContext.Provider value={{ events, addEvent, setEvents, updateEvent }}>
+    <PeopleContext.Provider value={{ people, addPerson }}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen
+            name="Dashboard"
+            component={TabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AggiungiEvento"
+            component={AggiungiEvento}
+            options={{ title: 'Aggiungi Evento' }}
+          />
+          <Stack.Screen name="AggiungiPersona" component={AggiungiPersona} options={{ title: 'Aggiungi Persona' }} />
+          <Stack.Screen
+  name="Eventi"
+  component={Eventi}
+  options={{ title: 'Eventi' }}
+/>
+            <Stack.Screen
+              name="DettagliEvento"
+              component={DettagliEvento}
+              options={{ title: 'Dettagli Evento' }}
+            />
+        </Stack.Navigator>
+      </NavigationContainer>
+      </PeopleContext.Provider>
+    </EventsContext.Provider>
+  );
+
+};
+
+//schermata EVENTI
+const Eventi = () => {
+  const { events, setEvents } = useContext(EventsContext);
+  // search memorizza il valore attuale, setSearch è la funzione per aggiornare search 
+ //useState per aggiungere lo stato locale
+  const [search, setSearch] = useState('');
+
+  //filtro corrente impostato ad all
+  const [filterOption, setFilterOption] = useState('all');
+
+  //per impostare che il filtro sia nascosto
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const navigation = useNavigation();
+
+//per eliminare un evento
+  const deleteEvent = (eventToDelete) => {
+    const updatedEvents = events.filter(event => event !== eventToDelete);
+    setEvents(updatedEvents);
+  };
+
+//per chiudere il filtro
+  const closeFilterModal = () => {
+    setShowFilterModal(false);
+  };
+
+//per selezionare il filtro selezionato dall'utente
+  const filterEventsByOption = (option) => {
+    setFilterOption(option);
+    closeFilterModal();
+  };
+
+//filtri selezionabili dall'utente
+  const filteredEvents = events.filter(event => {
+    if (filterOption === 'all') {
+      return event.titolo.toLowerCase().includes(search.toLowerCase());
+    } else if (filterOption === 'today') {
+      // Implementa la logica per filtrare gli eventi di oggi
+    } else if (filterOption === 'tomorrow') {
+      // Implementa la logica per filtrare gli eventi di domani
+    }
+  });
+
+//layout di evento aggiunto
+  const renderEvento = ({ item }) => (
+    <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('DettagliEvento', { evento: item })}
+        style={styles.dettagli}
+      >
+        <Text>Dettagli</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.elimina}
+        onPress={() => deleteEvent(item)}
+      >
+        <Text>Elimina</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View style={styles.contenitoreEventi}>
+      <View style={styles.searchContainer}>
+        <SearchBar
+          placeholder="Cerca evento..."
+          onChangeText={setSearch}  // Funzione chiamata ogni volta che il testo di input cambia.
+          value={search}            // Valore attuale del campo di ricerca
+          containerStyle={styles.searchBarContainer}
+          inputContainerStyle={styles.searchBarInputContainer}
+        />
+        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+          <Icon name="filter" type="font-awesome" />
+        </TouchableOpacity>
+      </View>
+
+
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeFilterModal}
+      >
+
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={() => filterEventsByOption('all')}>
+            <Text style={styles.filterOptionText}>Tutti</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => filterEventsByOption('today')}>
+            <Text style={styles.filterOptionText}>Oggi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => filterEventsByOption('tomorrow')}>
+            <Text style={styles.filterOptionText}>Domani</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={closeFilterModal}>
+            <Text style={styles.closeButton}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      
+      <FlatList  //Lista degli eventi da visualizzare
+        data={filteredEvents}
+        renderItem={renderEvento}
+        // Funzione che fornisce una chiave univoca per ogni elemento della lista
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={styles.flatListContentContainer}
+      />
+    </View>
+  );
+};
+
+//bottone dettagli evento su ogni singolo evento
+const DettagliEvento = ({ route }) => {
+  const { evento } = route.params;
+  const [editable, setEditable] = useState(false);
+  const { updateEvent } = useContext(EventsContext);
+  const [title, setTitle] = useState(evento.titolo);
+  const [date, setDate] = useState(evento.data.toLocaleDateString('it-IT'));
+  const [time, setTime] = useState(evento.orario);
+  const [location, setLocation] = useState(evento.luogo);
+  const [description, setDescription] = useState(evento.descrizione);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
+
+  const { people } = useContext(PeopleContext); // Recupera le informazioni delle persone dal contesto
+
+  // Restituisci il componente che visualizza le informazioni delle persone associate all'evento
+  const renderPeopleDetails = () => {
+    return people
+      .filter(person => person.eventId === evento.id) // Filtra solo le persone associate all'evento corrente
+      .map((person, index) => (
+        <View key={index} style={styles.personContainer}>
+          <Text> {person.nome}, {person.cognome}</Text>
+        </View>
+      ));
+  };
+
+//per consentire le modifiche 
+  const handleEditPress = () => {
+    setEditable(true);
+  };
+
+//salva le modifiche apportate e disabilità la modalità modifica
+  const handleSavePress = () => {
+    const [day, month, year] = date.split('/');
+    const updatedEvent = {
+      ...evento,
+      titolo: title,
+      data: new Date(year, month - 1, day), 
+      orario: time,
+      luogo: location,
+      descrizione: description,
+      notificationsEnabled
+    };
+
+    updateEvent(updatedEvent);
+    setEditable(false);
+  };
+
+//layout dettagli 
+  return (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Text style={styles.label1}>Titolo:</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          editable={editable}
+          placeholder="Inserisci titolo"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Data:</Text>
+        <TextInput
+          value={date}
+          onChangeText={setDate}
+          editable={editable}
+          placeholder="Inserisci data"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Orario:</Text>
+        <TextInput
+          value={time}
+          onChangeText={setTime}
+          editable={editable}
+          placeholder="Inserisci orario"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Luogo:</Text>
+        <TextInput
+          value={location}
+          onChangeText={setLocation}
+          editable={editable}
+          placeholder="Inserisci luogo"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Descrizione:</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          editable={editable}
+          placeholder="Inserisci descrizione"
+          style={styles.textInput}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <Text style={styles.label1}>Notifiche:</Text>
+        <Switch
+          value={notificationsEnabled}
+          onValueChange={setNotificationsEnabled}
+          disabled={!editable}
+        />
+      </View>
+      <View style={styles.peopleSection}>
+        <Text style={styles.sectionTitle}>Persone associate all'evento:</Text>
+        {renderPeopleDetails()}
+      </View>
+      {editable ? (
+        <TouchableOpacity style={styles.addButton1} onPress={handleSavePress}>
+          <Text style={styles.buttonText}>Salva</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.addButton1} onPress={handleEditPress}>
+          <Text style={styles.buttonText}>Modifica</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+//schermata AGGIUNGI 
+const GestisciEvento = () => {
+  const { addEvent } = useContext(EventsContext);
+   //useState per l'aggiunta e controllo dell'evento 
+  const [titolo, setTitolo] = useState('');
+  const [dataSelezionata, setDataSelezionata] = useState('');
+  const [descrizione, setDescrizione] = useState('');
+  const [luogo, setLuogo] = useState('');
+  const [orario, setOrario] = useState('');
+  const [isDataValid, setIsDataValid] = useState(true);
+  const [isTitoloEmpty, setIsTitoloEmpty] = useState(false);
+  const [isDescrizioneEmpty, setIsDescrizioneEmpty] = useState(false);
+  const [isLuogoEmpty, setIsLuogoEmpty] = useState(false);
+  const [isOrarioEmpty, setIsOrarioEmpty] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [persone, setPersone] = useState([]);
+  const [nomePersona, setNomePersona] = useState('');
+const idUnivoco = Date.now();
+const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
+
+//se le notifiche sono abilitiate vengono disabilitate e viceversa
+  const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
+
+  const handleAggiungiPersona = () => {
+    if (!isFieldEmpty(nomePersona)) {
+      setPersone([...persone, nomePersona]);
+      setNomePersona('');
+    }
+  };
+
+//controllo che la data sia corretta
+  const isValidDate = (day, month, year) => {
+    const data = new Date(year, month - 1, day);
+    return (
+      day === data.getDate() &&
+      month === data.getMonth() + 1 &&
+      year === data.getFullYear()
+    );
+  };
+
+//controllo che non sia vuoto il campo
+  const isFieldEmpty = (fieldValue) => {
+    return fieldValue.trim() === '';
+  };
+
+//aggiunge automaticamente il : dopo che vi sono state inserite 2 cifre nel campo orario
+  const formatOrario = (text) => {
+    if (text.length === 2 && text.length > orario.length) {
+      return text + ':';
+    }
+    return text;
+  };
+
+  //parsing data di nascita 
+  const handleAggiungiEvento = () => {
+    const dataFormattata = dataSelezionata.split('/');
+    const giorno = parseInt(dataFormattata[0], 10);
+    const mese = parseInt(dataFormattata[1], 10);
+    const anno = parseInt(dataFormattata[2], 10);
+
+    if (!isValidDate(giorno, mese, anno)) {
+      setIsDataValid(false);
+      return;
+    }
+
+//verifica e aggiorna la data se data è sbagliata
+    const orarioRegexp = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!orarioRegexp.test(orario)) {
+      setIsOrarioEmpty(true);
+      return;
+    }
+
+    setIsTitoloEmpty(isFieldEmpty(titolo));
+    setIsDescrizioneEmpty(isFieldEmpty(descrizione));
+    setIsLuogoEmpty(isFieldEmpty(luogo));
+    setIsOrarioEmpty(isFieldEmpty(orario));
+
+    if (isFieldEmpty(titolo) || isFieldEmpty(descrizione) || isFieldEmpty(luogo) || isFieldEmpty(orario)) {
+      return;
+    }
+
+    setIsDataValid(true);
+
+    const nuovaData = new Date(anno, mese - 1, giorno);
+
+
+    const nuovoEvento = { id: idUnivoco, titolo, data: nuovaData, descrizione, luogo, orario, notificationsEnabled, persone, expectedPeopleCount, iscritti: 0 };
+
+    addEvent(nuovoEvento); //aggiungiamo l'evento
+
+//alert per confermare l'aggiunta dell'evento e refresh dei campi
+    Alert.alert("Perfetto", "Evento inserito correttamente");
+
+    setTitolo('');
+    setDataSelezionata('');
+    setDescrizione('');
+    setLuogo('');
+    setOrario('');
+    setPersone([]);
+    setNotificationsEnabled(false);
+  };
+
+//layout della schermata aggiungi
+  return (
+    <View style={styles.container}>
+      <ScrollView>
+        <Text style={styles.label}>Titolo:</Text>
+        <TextInput
+          style={[styles.input, isTitoloEmpty && styles.invalidInput]}
+          value={titolo}
+          onChangeText={setTitolo}
+          placeholder="Inserisci il titolo"
+          placeholderTextColor="#888"
+        />
+        {isTitoloEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+        <Text style={styles.label}>Data:</Text>
+        <TextInput
+          style={[styles.input, !isDataValid && styles.invalidInput]}
+          placeholder="Inserisci la data (DD/MM/YYYY)"
+          placeholderTextColor="#888"
+          value={dataSelezionata}
+          maxLength={10}
+          keyboardType="numeric"
+          onChangeText={(text) => {
+            if ((text.length === 2 || text.length === 5) && text.length > dataSelezionata.length) {
+              setDataSelezionata(text + '/');
+            } else {
+              setDataSelezionata(text);
+            }
+          }}
+        />
+        {!isDataValid && <Text style={styles.errorText}>Data non valida</Text>}
+
+        <Text style={styles.label}>Orario:</Text>
+        <TextInput
+          style={[styles.input, isOrarioEmpty && styles.invalidInput]}
+          value={orario}
+          onChangeText={(text) => setOrario(formatOrario(text))}
+          placeholder="Inserisci l'orario (HH:MM)"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          maxLength={5}
+        />
+        {isOrarioEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+        <Text style={styles.label}>Luogo:</Text>
+        <TextInput
+          style={[styles.input, isLuogoEmpty && styles.invalidInput]}
+          value={luogo}
+          onChangeText={setLuogo}
+          placeholder="Inserisci il luogo"
+          placeholderTextColor="#888"
+        />
+        {isLuogoEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+
+        <Text style={styles.label}>Descrizione:</Text>
+        <TextInput
+          style={[styles.input, styles.textArea, isDescrizioneEmpty && styles.invalidInput]}
+          value={descrizione}
+          onChangeText={setDescrizione}
+          placeholder="Inserisci la descrizione"
+          placeholderTextColor="#888"
+          multiline={true}
+          numberOfLines={4}
+        />
+        {isDescrizioneEmpty && <Text style={styles.errorText}>Questo campo è obbligatorio</Text>}
+                <Text style={styles.label}>Persone attese:</Text>
+        <TextInput
+          style={styles.input}
+          value={expectedPeopleCount}
+          onChangeText={setExpectedPeopleCount}
+          placeholder="Inserisci il numero di persone attese"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+        />
+
+    <View style={styles.notificationContainer}>
+          <Text>Notifica:</Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#6200ea" }}
+            thumbColor={notificationsEnabled ? "#6200ea" : "#dcd0ff"}
+            onValueChange={toggleNotifications}
+            value={notificationsEnabled}
+          />
+        </View>
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity
+            onPress={handleAggiungiEvento}
+            style={styles.addButton1}
+          >
+            <Text style={styles.buttonText}>Aggiungi Evento</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+//schermata STATISTICHE
+const Statistiche = () => {
+  const { events } = useContext(EventsContext);
+
+//se non ci sono eventi mostra "nessun evento disponibile"
+  if (!events || events.length === 0) {
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Nessun evento disponibile.</Text>
+      </View>
+    );
+  }
+
+
+  const annoCorrente = new Date().getFullYear();
+  const eventiAnnoCorrente = events.filter(evento => {
+      const annoEvento = new Date(evento.data).getFullYear();
+      return annoEvento === annoCorrente;
+    });
+
+  // Calcola la somma delle persone attese in tutti gli eventi
+  const totalExpectedPeople = events.reduce((accumulator, event) => accumulator + parseFloat(event.expectedPeopleCount), 0);
+  const media = totalExpectedPeople / events.length;
+
+  // Prepara i dati per il grafico a barre
+  const barChartData = events.map((event) => ({
+    label: event.titolo,
+    value: parseFloat(event.expectedPeopleCount),
+  }));
+
+  // Prepara i dati per il grafico a torta
+  const pieChartData = events.map((event) => ({
+    name: event.titolo,
+    population: parseFloat(event.expectedPeopleCount),
+    color: `#${Math.floor(Math.random() * 16777215).toString(16)}`, // Genera un colore casuale per ogni fetta
+    legendFontColor: '#7F7F7F',
+    legendFontSize: 15,
+  }));
+
+//layout schermata statistiche
+  return (
+    <View>
+    <ScrollView contentContainerStyle={{ alignItems: 'center' }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
+        Persone Attese: {media.toFixed(2)}
+      </Text>
+      <View style={{ marginBottom: 20 }}>
+        <BarChart data={barChartData} width={300} height={200} />
+      </View>
+      <View style={{ marginBottom: 20 }}>
+        <PieChart data={pieChartData} width={300} height={200} />
+      </View>
+  <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
+        Altre statistiche
+      </Text>
+       <Text style={styles.stat}>Eventi totali: {events.length} </Text>
+      <Text style={styles.stat}>Eventi nell''anno corrente: {eventiAnnoCorrente.length} </Text>
+
+    </ScrollView>
+    </View>
+  );
+};
+
+//schermata NOTFICHE
+const Notifiche = () => {
+  const { events } = useContext(EventsContext);
+  // Ottieni la data odierna
+  const today = new Date();
+
+//verifica se le due date sono lo stesso giorno
+  const isSameDay = (date1, date2) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
+  // Filtra gli eventi che hanno abilitato le notifiche e che sono ad un giorno dalla data odierna
+  const filteredEvents = events.filter(event => {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1); // Incrementa la data odierna di un giorno
+
+    // Verifica se l'evento ha abilitato le notifiche e se la sua data è uguale a quella di domani
+    return event.notificationsEnabled && isSameDay(event.data, tomorrow);
+  });
+
+//layout singola notifica
+  const renderEvent = ({ item }) => (
+    <View style={styles.eventContainer}>
+      <Text style={styles.eventTitle}>{item.titolo}</Text>
+      <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
+      <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
+    </View>
+  );
+
+//layout della schermata notifica
+  return (
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={filteredEvents}
+        renderItem={renderEvent}
+        keyExtractor={(item, index) => index.toString()}
+      />
+    </View>
+  );
+};
+
+
+//stile dell'intera applicazione
+const styles = StyleSheet.create({
+ container: {
+    flex: 1,
+    padding: 20,
+
+  },
+  stat: {
+    margin: 5,
+    borderWidth: 1,
+    borderColor: '#6200ea',
+    backgroundColor: '#e6e6fa',
+    borderRadius: 4,
+    padding: 5,
+  }, 
+  row: {
+    padding: 8, 
+  }, 
+  label1: {
+    fontSize: 16,
+  }, 
+  textInput:{
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#6200ea',
+    borderRadius: 4,
+    padding: 5,
+  }, 
+  elimina:{
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 3,
+    margin: 2, 
+    backgroundColor: '#FF0000',
+    borderRadius: 4,
+  },
+
+  label: {
+    fontSize: 16,
+    marginVertical: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#6200ea',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventContainer: {
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#e6e6fa',
+    marginLeft: 20,
+    marginRight: 20,
+    borderWidth: 2,
+    borderColor: '#4b0082',
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  eventDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  eventDescription: {
+    fontSize: 14,
+    fontStyle: 'italic', 
+  },
+    invalidInput: {
+    borderColor: 'red', 
+  },
+  errorText: {
+    color: 'red', 
+    fontSize: 14, 
+    marginTop: -10, 
+    marginBottom: 10, 
+  },
+   addButtonContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addButton1: {
+    backgroundColor: '#6200ea', 
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 5,
+    
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+plus: {
+    position: 'absolute', 
+    bottom: 5,
+    right: 10, 
+    backgroundColor: '#e6e6fa',
+    borderRadius: 10,
+    width: 30, 
+    height: 30, 
+        justifyContent: 'center', 
+    alignItems: 'center',
+},
+  tabContainer: {
+    flex: 1,
+  },
+  eventsMargin: {
+    marginTop: 20, 
+  },
+  contenitoreEventi: {
+    flex: 1,
+  },
+  flatListContentContainer: {
+    padding: 16, 
+  },
+  searchBarContainer: {
+    margin: 10,
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    paddingHorizontal: 10,
+        width: '90%', 
+    alignSelf: 'center', 
+     borderRadius: 20,
+  
+  },
+  searchBarInputContainer: {
+    backgroundColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent',
+    height: 30,
+   
+  },
+    descriptionSpacer: {
+    marginBottom: 10, 
+  },
+dettagli: {
+ backgroundColor: '#6200ea',
+     padding: 8, 
+
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute', 
+    bottom: 5, 
+    right: 5, 
+    borderRadius: 5,
+
+
+},
+   addButtonContainer1: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  modalContainer: {
+       flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+    justifyContent: 'center', 
+    alignItems: 'center', 
+  },
+  closeButton: {
+    color: 'blue',
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    marginBottom: 10,
+
+  },
+    searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', 
+    paddingHorizontal: 10,
+
+  },
+});
+
+export default Main;
