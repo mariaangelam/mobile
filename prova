@@ -18,7 +18,45 @@ const PeopleContext = createContext();
 
 
 const Statistiche = () => {
-  
+  const { events } = useContext(EventsContext);
+  const { people } = useContext(PeopleContext);
+
+  if (!events || events.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Nessun evento disponibile.</Text>
+      </View>
+    );
+  }
+
+  // Calcola la somma delle persone attese in tutti gli eventi
+  const totalExpectedPeople = events.reduce((accumulator, event) => accumulator + parseFloat(event.expectedPeopleCount), 0);
+  const media = totalExpectedPeople / events.length;
+
+  // Prepara i dati per il grafico
+  const eventData = events.map((event, index) => ({
+    label: event.titolo,
+    value: parseFloat(event.expectedPeopleCount),
+  }));
+
+  return (
+    <View>
+      <ScrollView>
+       <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
+        Persone Attese: {media.toFixed(2)}</Text>
+        <BarChart
+          data={eventData}
+          barWidth={35}
+          chartConfig={{
+          
+            color: '#9664C8',
+labelColor: '#9664C8',
+          }}
+          
+        />
+      </ScrollView>
+    </View>
+  );
 };
 
 
