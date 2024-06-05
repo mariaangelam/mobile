@@ -224,6 +224,20 @@ const DettagliEvento = ({ route }) => {
   const [description, setDescription] = useState(evento.descrizione);
   const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
 
+  const { people } = useContext(PeopleContext); // Recupera le informazioni delle persone dal contesto
+
+  // Restituisci il componente che visualizza le informazioni delle persone associate all'evento
+  const renderPeopleDetails = () => {
+    return people
+      .filter(person => person.eventId === evento.id) // Filtra solo le persone associate all'evento corrente
+      .map((person, index) => (
+        <View key={index} style={styles.personContainer}>
+          <Text> {person.nome}, {person.cognome}</Text>
+        </View>
+      ));
+  };
+
+
   const handleEditPress = () => {
     setEditable(true);
   };
@@ -309,7 +323,10 @@ const DettagliEvento = ({ route }) => {
           disabled={!editable}
         />
       </View>
-
+      <View style={styles.peopleSection}>
+        <Text style={styles.sectionTitle}>Persone associate all'evento:</Text>
+        {renderPeopleDetails()}
+      </View>
       {editable ? (
         <TouchableOpacity style={styles.addButton1} onPress={handleSavePress}>
           <Text style={styles.buttonText}>Salva</Text>
@@ -571,7 +588,7 @@ const { people } = useContext(PeopleContext);
           <Text>Persone Attese: {item.expectedPeopleCount}</Text>
       <Text>Iscritti: {item.iscritti}</Text>
     <TouchableOpacity 
-  onPress={() => navigation.navigate('AggiungiPersona', { idUnivoco: item.idUnivoco })} 
+  onPress={() => navigation.navigate('AggiungiPersona', { id: item.id })} 
   style={[styles.plus, styles.descriptionSpacer]}
 >
       <MaterialCommunityIcons name="account-plus" size={25} color="#6200ea" />
@@ -759,8 +776,10 @@ const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
   );
 };
 
-const AggiungiPersona = ({ navigation, route }) => {
-  const { idUnivoco } = route.params;
+const AggiungiPersona = ({ navigation }) => {
+  
+ const { events } = useContext(EventsContext);
+ const [selectedEventId, setSelectedEventId] = useState(events.length > 0 ? events[0].id : null);
   const { addPerson } = useContext(PeopleContext);
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
@@ -803,7 +822,7 @@ const AggiungiPersona = ({ navigation, route }) => {
 
     const nuovaData = new Date(anno, mese - 1, giorno);
 
-    const nuovaPersona = { idUnivoco, nome, cognome, dataNascita: nuovaData };
+    const nuovaPersona = { eventId: selectedEventId , nome, cognome, dataNascita: nuovaData };
  
     addPerson(nuovaPersona);
     navigation.goBack();
@@ -872,21 +891,22 @@ const App = () => {
   const addEvent = (newEvent) => {
     setEvents([...events, newEvent]);
   };
-   const addPerson = (newPerson) => {
-    setPeople([...people, newPerson]);
+  const addPerson = (newPerson) => {
+  setPeople([...people, newPerson]);
 
-    // Aggiorna il numero di iscritti dell'evento corrispondente
-    const updatedEvents = events.map(event => {
-      if (event.idUnivoco === newPerson.idUnivoco) {
+  // Aggiorna il numero di iscritti dell'evento corrispondente
+  setEvents((prevEvents) => {
+    return prevEvents.map(event => {
+      if (event.id === newPerson.eventId) {
         return {
           ...event,
-          iscritti: event.iscritti + 1,
+        iscritti: event.iscritti + 1,
         };
       }
       return event;
     });
-    setEvents(updatedEvents);
-  };
+  });
+};
 
 
    const updateEvent = (updatedEvent) => {
