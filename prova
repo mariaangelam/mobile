@@ -1,14 +1,15 @@
-import React, { useState, createContext, useContext, useRef } from 'react';
+import React, {useEffect, useState, createContext, useContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Alert } from 'react-native';
-import { SearchBar } from 'react-native-elements';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Switch, ScrollView, Alert, Modal } from 'react-native';
+import { SearchBar, Icon  } from 'react-native-elements';
 import SQLite from 'react-native-sqlite-storage';
 import { useNavigation } from '@react-navigation/native';
-import { LineChart } from 'react-native-gifted-charts';
+import { BarChart } from 'react-native-gifted-charts';
+
 
 
 const EventsContext = createContext();
@@ -322,24 +323,38 @@ const DettagliEvento = ({ route }) => {
 
 
  const Eventi = () => {
- const { events, setEvents } = useContext(EventsContext);
- 
- const [search, setSearch] = useState('');
- const navigation = useNavigation();
+  const { events, setEvents } = useContext(EventsContext);
+  const [search, setSearch] = useState('');
+  const [filterOption, setFilterOption] = useState('all');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const navigation = useNavigation();
 
-  // Funzione per filtrare gli eventi in base al testo della searchbar
-  const filteredEvents = events.filter(event =>
-    event.titolo.toLowerCase().includes(search.toLowerCase())
-  );
-
-const deleteEvent = (id) => {
-  const updatedEvents = events.filter(event => event.id !== id);
-  setEvents(updatedEvents);
+  const deleteEvent = (eventToDelete) => {
+    const updatedEvents = events.filter(event => event !== eventToDelete);
+    setEvents(updatedEvents);
   };
-  
+
+  const closeFilterModal = () => {
+    setShowFilterModal(false);
+  };
+
+  const filterEventsByOption = (option) => {
+    setFilterOption(option);
+    closeFilterModal();
+  };
+
+  const filteredEvents = events.filter(event => {
+    if (filterOption === 'all') {
+      return event.titolo.toLowerCase().includes(search.toLowerCase());
+    } else if (filterOption === 'today') {
+      // Implementa la logica per filtrare gli eventi di oggi
+    } else if (filterOption === 'tomorrow') {
+      // Implementa la logica per filtrare gli eventi di domani
+    }
+  });
 
   const renderEvento = ({ item }) => (
-       <View style={styles.eventContainer}>
+    <View style={styles.eventContainer}>
       <Text style={styles.eventTitle}>{item.titolo}</Text>
       <Text style={styles.eventDate}>{item.data.toLocaleDateString()}</Text>
       <Text style={styles.eventDescription} numberOfLines={3}>{item.descrizione}</Text>
@@ -351,31 +366,56 @@ const deleteEvent = (id) => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.elimina}
-        onPress={() => deleteEvent(item.id)}
+        onPress={() => deleteEvent(item)}
       >
         <Text>Elimina</Text>
-        </TouchableOpacity>
+      </TouchableOpacity>
     </View>
   );
 
   return (
-   <View style={styles.contenitoreEventi}>
-  
-    <SearchBar
-      placeholder="Cerca evento..."
-      onChangeText={setSearch}
-      value={search}
-      containerStyle={styles.searchBarContainer}
-      inputContainerStyle={styles.searchBarInputContainer}
-    />
+    <View style={styles.contenitoreEventi}>
+      <View style={styles.searchContainer}>
+        <SearchBar
+          placeholder="Cerca evento..."
+          onChangeText={setSearch}
+          value={search}
+          containerStyle={styles.searchBarContainer}
+          inputContainerStyle={styles.searchBarInputContainer}
+        />
+        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+          <Icon name="filter" type="font-awesome" />
+        </TouchableOpacity>
+      </View>
 
-    <FlatList
-      data={filteredEvents}
-      renderItem={renderEvento}
-      keyExtractor={(item, index) => index.toString()}
-      contentContainerStyle={styles.flatListContentContainer}
-    />
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeFilterModal}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={() => filterEventsByOption('all')}>
+            <Text style={styles.filterOptionText}>Tutti</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => filterEventsByOption('today')}>
+            <Text style={styles.filterOptionText}>Oggi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => filterEventsByOption('tomorrow')}>
+            <Text style={styles.filterOptionText}>Domani</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={closeFilterModal}>
+            <Text style={styles.closeButton}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
       
+      <FlatList
+        data={filteredEvents}
+        renderItem={renderEvento}
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={styles.flatListContentContainer}
+      />
     </View>
   );
 };
@@ -1035,6 +1075,32 @@ dettagli: {
     alignItems: 'center',
     marginVertical: 10,
   },
+  modalContainer: {
+       flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+    justifyContent: 'center', // Centra verticalmente
+    alignItems: 'center', // Centra orizzontalmente
+  },
+  closeButton: {
+    color: 'blue',
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    marginBottom: 10,
+
+  },
+    searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // Spazia gli elementi all'interno orizzontalmente
+    paddingHorizontal: 10,
+
+  },
+  
+
 
 });
 
