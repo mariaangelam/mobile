@@ -28,6 +28,13 @@ const Statistiche = () => {
     );
   }
 
+
+  const annoCorrente = new Date().getFullYear();
+  const eventiAnnoCorrente = events.filter(evento => {
+      const annoEvento = new Date(evento.data).getFullYear();
+      return annoEvento === annoCorrente;
+    });
+
   // Calcola la somma delle persone attese in tutti gli eventi
   const totalExpectedPeople = events.reduce((accumulator, event) => accumulator + parseFloat(event.expectedPeopleCount), 0);
   const media = totalExpectedPeople / events.length;
@@ -48,6 +55,8 @@ const Statistiche = () => {
   }));
 
   return (
+    <View>
+ 
     <ScrollView contentContainerStyle={{ alignItems: 'center' }}>
       <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
         Persone Attese: {media.toFixed(2)}
@@ -58,7 +67,16 @@ const Statistiche = () => {
       <View style={{ marginBottom: 20 }}>
         <PieChart data={pieChartData} width={300} height={200} />
       </View>
+  <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 10 }}>
+        Altre statistiche
+      </Text>
+       <Text style={styles.stat}>Eventi totali: {events.length} </Text>
+      <Text style={styles.stat}>Eventi nell''anno corrente: {eventiAnnoCorrente.length} </Text>
+
     </ScrollView>
+
+
+    </View>
   );
 };
 
@@ -87,12 +105,6 @@ const [expectedPeopleCount, setExpectedPeopleCount] = useState('');
 
   const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
 
-  const handleAggiungiPersona = () => {
-    if (!isFieldEmpty(nomePersona)) {
-      setPersone([...persone, nomePersona]);
-      setNomePersona('');
-    }
-  };
 
   const isValidDate = (day, month, year) => {
     const data = new Date(year, month - 1, day);
@@ -265,7 +277,7 @@ const DettagliEvento = ({ route }) => {
   const [location, setLocation] = useState(evento.luogo);
   const [description, setDescription] = useState(evento.descrizione);
   const [notificationsEnabled, setNotificationsEnabled] = useState(evento.notificationsEnabled);
-
+const isEventoPassato = new Date(evento.data) < new Date(); 
   const { people } = useContext(PeopleContext); // Recupera le informazioni delle persone dal contesto
 
   // Restituisci il componente che visualizza le informazioni delle persone associate all'evento
@@ -366,7 +378,7 @@ const DettagliEvento = ({ route }) => {
         />
       </View>
       <View style={styles.peopleSection}>
-        <Text style={styles.sectionTitle}>Persone associate all'evento:</Text>
+        <Text style={styles.label1}>{isEventoPassato ? 'Iscritti finali' : 'Attuali iscritti'}</Text>
         {renderPeopleDetails()}
       </View>
       {editable ? (
@@ -818,10 +830,10 @@ const { events } = useContext(EventsContext); // Ottieni gli eventi dal contesto
   );
 };
 
-const AggiungiPersona = ({ navigation }) => {
+const AggiungiPersona = ({ navigation, route }) => {
   
  const { events } = useContext(EventsContext);
- const [selectedEventId, setSelectedEventId] = useState(events.length > 0 ? events[0].id : null);
+ const [selectedEventId, setSelectedEventId] = useState(route.params?.id || (events.length > 0 ? events[0].id : null));
   const { addPerson } = useContext(PeopleContext);
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
@@ -999,6 +1011,14 @@ const styles = StyleSheet.create({
     padding: 20,
 
   },
+  stat: {
+    margin: 5,
+    borderWidth: 1,
+    borderColor: '#6200ea',
+    backgroundColor: '#e6e6fa',
+    borderRadius: 4,
+    padding: 5,
+  }, 
   row: {
     padding: 8, 
   }, 
